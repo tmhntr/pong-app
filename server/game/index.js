@@ -13,7 +13,6 @@ function purgeGames() {
       delete currentGames[gid];
     }
   });
-  console.log(`Current games: ${Object.keys(currentGames)}`);
 }
 
 function playerLeaveGame(id) {
