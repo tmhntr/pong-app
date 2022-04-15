@@ -2,7 +2,7 @@ const express = require("express");
 const { createServer } = require("http");
 const { Server } = require("socket.io");
 const path = require("path");
-const initGame = require("./game");
+const { initGame, purgeGames } = require("./game");
 const app = express();
 app.use(express.static(path.resolve(__dirname, "../build")));
 const httpServer = createServer(app);
@@ -21,5 +21,6 @@ httpServer.listen(PORT, () => {
   console.log(`Listening on port ${PORT}...`);
   setInterval(() => {
     // TODO clean out games
+    purgeGames();
   }, 10000);
 });

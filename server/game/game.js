@@ -25,10 +25,11 @@ module.exports = class Game {
     this.lastTime = Date.now();
     this.left = null;
     this.right = null;
-    this.state = "play";
+    this.state = "pause";
   }
 
   start() {
+    this.play();
     this.ball.reset();
     this.gameObjects = [this.ball, this.lpaddle, this.rpaddle];
     this.lastTime = Date.now();

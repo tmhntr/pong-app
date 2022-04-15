@@ -27,7 +27,7 @@ module.exports = class Ball {
 
   reset() {
     this.position = { x: this.gameWidth / 2, y: this.gameHeight / 2 };
-    this.speed = { x: 40, y: 30 };
+    this.speed = { x: 40, y: -40 + Math.random() * 80 };
   }
 
   update(deltaTime) {
@@ -54,10 +54,12 @@ module.exports = class Ball {
 
     if (detectCollision(this, this.game.lpaddle)) {
       this.speed.x = -this.speed.x;
+      this.speed.y = -40 + Math.random() * 80;
       this.position.x = this.game.lpaddle.width;
     }
     if (detectCollision(this, this.game.rpaddle)) {
       this.speed.x = -this.speed.x;
+      this.speed.y = -40 + Math.random() * 80;
       this.position.x = this.gameWidth - (this.game.rpaddle.width + this.size);
     }
   }
