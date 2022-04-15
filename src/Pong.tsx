@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
-import { clientGame as Game } from "./clientGame";
-import { IO } from "./io";
-import useGame from "./clientGame/useGame";
+import { clientGame as Game } from "./utils/game";
+import { IO } from "./utils/io";
+import useGame from "./utils/useGame";
 
 const Pong: React.FC<{}> = ({}) => {
   const GAME_WIDTH = 800;
