@@ -1,16 +1,13 @@
-import React, { useEffect, useRef, useState } from "react";
-import { clientGame as Game } from "./utils/game";
-import { IO } from "./utils/io";
-import useGame from "./utils/useGame";
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import { clientGame } from "./utils/game";
 
-const Pong: React.FC<{}> = ({}) => {
+const Pong: React.FC<{ game: clientGame }> = ({ game }) => {
   const GAME_WIDTH = 800;
   const GAME_HEIGHT = 600;
-  const game = useGame();
   let ctx: CanvasRenderingContext2D | null = null;
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
-  const [gid, setGid] = useState("");
+  // const gid = useMemo(() => game.gid, [game]);
 
   useEffect(() => {
     // let canvas = document.getElementById('canvas') as HTMLCanvasElement
@@ -26,28 +23,13 @@ const Pong: React.FC<{}> = ({}) => {
 
   return (
     <div>
+      <p id="gameId"></p>
       <canvas
         id="canvas"
         ref={canvasRef}
         height={GAME_HEIGHT}
         width={GAME_WIDTH}
       />
-      <button onClick={() => game.io.newGame()}>New game</button>
-      <input
-        type="text"
-        value={gid}
-        onChange={({ target }) => {
-          setGid(target.value);
-        }}
-      />
-      <button
-        onClick={() => {
-          game.io.joinGame(gid);
-          setGid("");
-        }}
-      >
-        Join game
-      </button>
     </div>
   );
 };

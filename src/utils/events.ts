@@ -12,14 +12,14 @@ export interface ServerToClientEvents {
     rPaddle: Position;
     score: { left: number; right: number };
   }) => void;
+  joinGameSuccess: (data: { gid: string }) => void;
   joinGameFailed: (error: { message: string }) => void;
-  joinGameSuccess: (gid: string) => void;
+  newGameSuccess: (data: { gid: string }) => void;
   newGameFailed: (error: { message: string }) => void;
-  newGameSuccess: (gid: string) => void;
 }
 
 export interface ClientToServerEvents {
-  action: (data: Action) => void;
+  action: (data: { action: Action }) => void;
   newGame: () => void;
-  joinGame: (gid: string) => void;
+  joinGame: (data: { gid: string }) => void;
 }

@@ -11,25 +11,24 @@ export class IO {
   playerJoinedRoom: (data: { playerName: string }) => void;
   playerLeftRoom: () => void;
   error: (data: { message: string }) => void;
-  beginNewGame: () => void;
   update: (data: {
     ball: { position: Position; velocity: Position };
     lPaddle: Position;
     rPaddle: Position;
     score: { left: number; right: number };
   }) => void;
+  newGameSuccess: ({ gid }: { gid: string }) => void;
+  joinGameSuccess: ({ gid }: { gid: string }) => void;
 
   constructor(game: clientGame) {
-    this.socket = io();
+    const socket = io();
+    this.socket = socket;
     this.game = game;
     this.gid = null;
 
     this.connected = (data: { message: string }) => {
       // game.setSocketId(this.socket.socket.sessionid);
       console.log(data.message);
-    };
-    this.beginNewGame = () => {
-      game.gameCountdown();
     };
 
     this.playerJoinedRoom = (data) => {
@@ -46,7 +45,18 @@ export class IO {
 
     this.update = (data) => {
       game.update(data);
-      this.socket.emit("action", game.getAction());
+      socket.emit("action", { action: game.getAction() });
+    };
+
+    this.newGameSuccess = ({ gid }: { gid: string }): void => {
+      game.gid = gid;
+      let idtag = document.getElementById("gameId");
+      if (idtag) idtag.innerHTML = `${gid}`;
+    };
+    this.joinGameSuccess = ({ gid }: { gid: string }) => {
+      game.gid = gid;
+      let idtag = document.getElementById("gameId");
+      if (idtag) idtag.innerHTML = `${gid}`;
     };
 
     this.bindEvents();
@@ -58,33 +68,31 @@ export class IO {
    */
   bindEvents() {
     this.socket.on("connected", this.connected);
+
+    this.socket.on("newGameSuccess", this.newGameSuccess);
+    this.socket.on("joinGameSuccess", this.joinGameSuccess);
+
     this.socket.on("playerJoinedRoom", this.playerJoinedRoom);
     this.socket.on("playerLeftRoom", this.playerLeftRoom);
     this.socket.on("update", this.update);
+
     this.socket.on("error", this.error);
     this.socket.on("joinGameFailed", this.joinGameFailed);
+    this.socket.on("newGameFailed", this.newGameFailed);
   }
 
   newGame() {
     this.socket.emit("newGame");
-    console.log(`Starting new game with id: ${this.gid}`);
   }
 
-  newGameSuccess(gid: string) {
-    this.game.gid = gid;
-  }
-
-  newGameFailed(error: { message: string }) {
-    alert(error.message);
+  newGameFailed({ message }: { message: string }) {
+    alert(message);
   }
 
   joinGame(gid: string) {
-    this.socket.emit("joinGame", gid);
+    this.socket.emit("joinGame", { gid: gid });
   }
-  joinGameFailed(error: { message: string }) {
-    alert(error.message);
-  }
-  joinGameSuccess(gid: string) {
-    this.game.gid = gid;
+  joinGameFailed({ message }: { message: string }) {
+    alert(message);
   }
 }

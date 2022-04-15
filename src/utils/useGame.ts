@@ -1,4 +1,4 @@
-import { clientGame } from ".";
+import { clientGame } from "./game";
 let game: clientGame;
 
 const useGame = () => {

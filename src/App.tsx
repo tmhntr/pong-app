@@ -1,14 +1,13 @@
-import React from "react";
-import logo from "./logo.svg";
 import "./App.css";
-import Pong from "./Pong";
+import { clientGame } from "./utils/game";
+import WaitingPage from "./WaitingPage";
 
 function App() {
+  const game = new clientGame(800, 600);
   return (
     <div className="App">
-      <header className="App-header">
-        <Pong />
-      </header>
+      <header className="App-header"></header>
+      <WaitingPage game={game} />
     </div>
   );
 }
