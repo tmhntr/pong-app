@@ -1,4 +1,4 @@
-import { Action, Position } from "./game";
+import { Action, CoordinateData, GameState } from "./game/types";
 
 export interface ServerToClientEvents {
   connected: (data: { message: string }) => void;
@@ -6,12 +6,7 @@ export interface ServerToClientEvents {
   playerLeftRoom: () => void;
   error: (data: { message: string }) => void;
   beginGame: () => void;
-  update: (data: {
-    ball: { position: Position; velocity: Position };
-    lPaddle: Position;
-    rPaddle: Position;
-    score: { left: number; right: number };
-  }) => void;
+  update: (data: GameState) => void;
   joinGameSuccess: (data: { gid: string }) => void;
   joinGameFailed: (error: { message: string }) => void;
   newGameSuccess: (data: { gid: string }) => void;

@@ -3,7 +3,7 @@ import { clientGame } from "./utils/game";
 import WaitingPage from "./WaitingPage";
 
 function App() {
-  const game = new clientGame(800, 600);
+  const game = new clientGame();
   return (
     <div className="App">
       <header className="App-header"></header>

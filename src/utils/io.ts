@@ -1,7 +1,7 @@
-import { Position, Action, clientGame } from "./game";
+import { clientGame } from "./game";
 import { io, Socket } from "socket.io-client";
-import { v4 as uuid } from "uuid";
 import { ClientToServerEvents, ServerToClientEvents } from "./events";
+import { Action, CoordinateData, GameState } from "./game/types";
 
 export class IO {
   game: clientGame;
@@ -11,14 +11,11 @@ export class IO {
   playerJoinedRoom: (data: { playerName: string }) => void;
   playerLeftRoom: () => void;
   error: (data: { message: string }) => void;
-  update: (data: {
-    ball: { position: Position; velocity: Position };
-    lPaddle: Position;
-    rPaddle: Position;
-    score: { left: number; right: number };
-  }) => void;
+  update: (data: GameState) => void;
   newGameSuccess: ({ gid }: { gid: string }) => void;
   joinGameSuccess: ({ gid }: { gid: string }) => void;
+  serverAction: (data: Action) => void;
+  requestUpdate: () => void;
 
   constructor(game: clientGame) {
     const socket = io();
@@ -43,9 +40,21 @@ export class IO {
       alert(data.message);
     };
 
-    this.update = (data) => {
-      game.update(data);
-      socket.emit("action", { action: game.getAction() });
+    this.update = (data: GameState) => {
+      if (data.timestamp > game.verifiedState.timestamp)
+        game.verifiedState = data;
+
+      // socket.emit("action", { action: game.getAction() });
+    };
+
+    this.serverAction = (data: Action) => {
+      game.actionBuffer.push(data);
+    };
+
+    this.requestUpdate = () => {
+      socket.emit("requestUpdate", {
+        actions: game.actionBuffer.filter((action) => action.target === "self"),
+      });
     };
 
     this.newGameSuccess = ({ gid }: { gid: string }): void => {

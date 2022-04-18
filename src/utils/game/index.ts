@@ -1,69 +1,114 @@
 import { default as Ball } from "./ball";
 import { default as Paddle } from "./paddle";
-import { v4 as uuid } from "uuid";
 import { IO } from "../io";
+import { Action, GameObjectState, GameState } from "./types";
 
 const { InputHandler } = require("./input");
 
-export type Position = { x: number; y: number };
-export type Action = 0 | 1 | 2;
+export function updatePosition(state: GameObjectState, dt: number) {
+  return {
+    x: state.position.x + (dt / 1000) * state.velocity.x,
+    y: state.position.y + (dt / 1000) * state.velocity.y,
+  };
+}
 
 export class clientGame {
-  action: Action;
-  GAME_HEIGHT: number;
-  GAME_WIDTH: number;
-  ball: Ball;
-  lPaddle: Paddle;
-  rPaddle: Paddle;
-  playerName: null | string;
-  oponentName: null | string;
-  gid: string | null;
+  playerName: null | string = null;
+  oponentName: null | string = null;
+  gid: string | null = null;
   ctx?: CanvasRenderingContext2D;
   io: IO;
   backgroundImage: HTMLImageElement;
-  score: { left: number; right: number };
-  gameCountdown() {
-    throw new Error("Method not implemented.");
-  }
-  updateWaitingScreen() {
-    throw new Error("Method not implemented.");
-  }
-  constructor(
-    GAME_WIDTH: number,
-    GAME_HEIGHT: number,
-    ctx?: CanvasRenderingContext2D
-  ) {
-    this.GAME_HEIGHT = GAME_HEIGHT;
-    this.GAME_WIDTH = GAME_WIDTH;
-    this.action = 1;
-    this.ball = new Ball();
-    this.lPaddle = new Paddle(this, "l");
-    this.rPaddle = new Paddle(this, "r");
-    this.playerName = null;
-    this.oponentName = null;
-    this.gid = null;
+  score = { right: 0, left: 0 };
+  actionBuffer: Action[] = [];
+  verifiedState: GameState;
+  self: Paddle;
+  opponent: Paddle;
+  ball: Ball;
+  gameObjects: (Ball | Paddle)[];
+
+  constructor(ctx?: CanvasRenderingContext2D) {
+    this.verifiedState = {
+      timestamp: Date.now(),
+      index: 1,
+      self: {
+        position: {
+          x: 0,
+          y: 0.5,
+        },
+        velocity: {
+          x: 0,
+          y: 0,
+        },
+      },
+      opponent: {
+        position: {
+          x: 1,
+          y: 0.5,
+        },
+        velocity: {
+          x: 0,
+          y: 0,
+        },
+      },
+      ball: {
+        position: {
+          x: 0.5,
+          y: 0.5,
+        },
+        velocity: {
+          x: 0.01,
+          y: 0.01,
+        },
+      },
+    };
+    this.self = new Paddle(this.verifiedState.self);
+    this.opponent = new Paddle(this.verifiedState.opponent);
+    this.ball = new Ball(this.verifiedState.ball);
+    this.gameObjects = [this.self, this.opponent, this.ball];
+    this.actionBuffer = [];
     this.ctx = ctx;
     new InputHandler(this, { up: "ArrowUp", down: "ArrowDown" });
+
     this.backgroundImage = new Image();
     this.backgroundImage.src = "/tennis-court.png";
+
     this.io = new IO(this);
-    this.score = { left: 0, right: 0 };
   }
 
   moveUp() {
-    this.action = 2;
+    console.log("move up");
+
+    this.actionBuffer.push({
+      target: "self",
+      payload: { velocity: { x: 0, y: -0.3 } },
+      timestamp: Date.now(),
+    });
   }
 
   moveDown() {
-    this.action = 0;
+    console.log("move down");
+
+    this.actionBuffer.push({
+      target: "self",
+      payload: { velocity: { x: 0, y: 0.3 } },
+      timestamp: Date.now(),
+    });
   }
 
   stop() {
-    this.action = 1;
+    console.log("stop");
+
+    this.actionBuffer.push({
+      target: "self",
+      payload: { velocity: { x: 0, y: 0 } },
+      timestamp: Date.now(),
+    });
   }
 
   draw() {
     if (this.ctx) {
+      // Try draw the background first
       try {
         this.ctx.drawImage(
           this.backgroundImage,
@@ -73,50 +118,53 @@ export class clientGame {
           this.backgroundImage.naturalHeight,
           0,
           0,
-          this.GAME_WIDTH,
-          this.GAME_HEIGHT
+          this.ctx.canvas.width,
+          this.ctx.canvas.height
         );
       } catch (error) {
         this.ctx.fillStyle = "#FFF";
-        this.ctx.rect(0, 0, this.GAME_WIDTH, this.GAME_HEIGHT);
+        this.ctx.rect(0, 0, this.ctx.canvas.width, this.ctx.canvas.height);
       }
-      this.ball.draw(this.ctx);
-      this.lPaddle.draw(this.ctx);
-      this.rPaddle.draw(this.ctx);
+
+      // Draw the game objects
+      this.gameObjects.forEach((obj) => this.ctx && obj.draw(this.ctx));
     }
   }
 
-  update(data: {
-    ball: { position: Position; velocity: Position };
-    lPaddle: Position;
-    rPaddle: Position;
-    score: {
-      left: number;
-      right: number;
-    };
-  }) {
-    this.score = data.score;
-    this.ball.update(data.ball.position);
+  update() {
+    let now = Date.now();
 
-    this.lPaddle.update(data.lPaddle);
-    this.rPaddle.update(data.rPaddle);
+    // filer out actions that occur in the future and sort in chronological order
+    let actions = this.actionBuffer
+      .filter((value) => value.timestamp < now)
+      .sort((a, b) => a.timestamp - b.timestamp);
 
-    this.draw();
+    // reset object states to last verified state
+    this.self.state = this.verifiedState.self;
+    this.opponent.state = this.verifiedState.opponent;
+    this.ball.state = this.verifiedState.ball;
+
+    // set starting time as verified timestamp
+    let prevTime = this.verifiedState.timestamp;
+
+    // update state from action to action
+    let dt: number;
+    for (const action of actions) {
+      dt = action.timestamp - prevTime;
+
+      this.gameObjects.forEach((obj) => obj.update(dt));
+
+      this[action.target].state = {
+        ...this[action.target].state,
+        ...action.payload,
+      };
+
+      prevTime = action.timestamp;
+    }
+    this.gameObjects.forEach((obj) => obj.update(now - prevTime));
   }
 
   setContext(ctx: CanvasRenderingContext2D) {
     this.ctx = ctx;
-  }
-
-  // setSocketId(id) {
-  //   this.socketId = id;
-  // }
-
-  getAction() {
-    return this.action;
-  }
-
-  setAction(action: Action) {
-    this.action = action;
   }
 }

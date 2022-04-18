@@ -17,6 +17,10 @@ const Pong: React.FC<{ game: clientGame }> = ({ game }) => {
       if (ctx) {
         game.setContext(ctx);
         game.draw();
+        setInterval(() => {
+          game.update();
+          game.draw();
+        }, 100);
       }
     }
   }, []);
