@@ -1,6 +1,6 @@
 import { GameObject } from "./types";
 
-const detectCollision = (ball: GameObject, paddle: GameObject) => {
+export const detectCollision = (ball: GameObject, paddle: GameObject) => {
   let bottomOfBall = ball.state.position.y + ball.HEIGHT;
   let topOfBall = ball.state.position.y;
   let leftOfBall = ball.state.position.x;

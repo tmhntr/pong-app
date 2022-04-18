@@ -5,17 +5,18 @@ export type GameObjectState = {
   velocity: CoordinateData;
 };
 export type Action = {
-  target: "self" | "opponent" | "ball";
   payload: {
     velocity: CoordinateData;
   };
   timestamp: number;
 };
+export type Side = "left" | "right";
 export type GameState = {
+  score: { left: number; right: number };
+  status: "playing" | "paused";
   timestamp: number;
-  index: number;
-  self: GameObjectState;
-  opponent: GameObjectState;
+  left: GameObjectState;
+  right: GameObjectState;
   ball: GameObjectState;
 };
 

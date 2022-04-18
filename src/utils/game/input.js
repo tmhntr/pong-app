@@ -4,13 +4,15 @@ export class InputHandler {
     document.addEventListener("keydown", (event) => {
       switch (event.key) {
         case keys.up:
-          this.action !== 2 && game.moveUp();
+          game.moveUp();
           this.action = 2;
           break;
 
         case keys.down:
-          this.action !== 0 && game.moveDown();
+          game.moveDown();
           this.action = 0;
+          break;
+        default:
           break;
 
         // case 'P':
@@ -33,6 +35,8 @@ export class InputHandler {
         case keys.down:
           if (this.action === 0) game.stop();
           this.action = 1;
+          break;
+        default:
           break;
       }
     });

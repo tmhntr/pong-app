@@ -1,7 +1,7 @@
 import { clientGame } from "./game";
 import { io, Socket } from "socket.io-client";
 import { ClientToServerEvents, ServerToClientEvents } from "./events";
-import { Action, CoordinateData, GameState } from "./game/types";
+import { Action, GameState, Side } from "./game/types";
 
 export class IO {
   game: clientGame;
@@ -11,11 +11,11 @@ export class IO {
   playerJoinedRoom: (data: { playerName: string }) => void;
   playerLeftRoom: () => void;
   error: (data: { message: string }) => void;
-  update: (data: GameState) => void;
-  newGameSuccess: ({ gid }: { gid: string }) => void;
-  joinGameSuccess: ({ gid }: { gid: string }) => void;
-  serverAction: (data: Action) => void;
-  requestUpdate: () => void;
+  update: (data: { state: GameState }) => void;
+
+  clientAction: (data: Action) => void;
+  newGameSuccess: ({ gid, side }: { gid: string; side: Side }) => void;
+  joinGameSuccess: ({ gid, side }: { gid: string; side: Side }) => void;
 
   constructor(game: clientGame) {
     const socket = io();
@@ -40,30 +40,37 @@ export class IO {
       alert(data.message);
     };
 
-    this.update = (data: GameState) => {
-      if (data.timestamp > game.verifiedState.timestamp)
-        game.verifiedState = data;
+    this.update = ({ state }) => {
+      game.prevVerifiedState = game.verifiedState;
+      game.verifiedState = state;
+
+      game.actionBuffer = game.actionBuffer.filter(
+        (val) => val.timestamp > state.timestamp
+      );
 
       // socket.emit("action", { action: game.getAction() });
     };
 
-    this.serverAction = (data: Action) => {
-      game.actionBuffer.push(data);
+    this.clientAction = (action: Action) => {
+      socket.emit("clientAction", { action });
     };
 
-    this.requestUpdate = () => {
-      socket.emit("requestUpdate", {
-        actions: game.actionBuffer.filter((action) => action.target === "self"),
-      });
-    };
-
-    this.newGameSuccess = ({ gid }: { gid: string }): void => {
+    this.newGameSuccess = ({
+      gid,
+      side,
+    }: {
+      gid: string;
+      side: Side;
+    }): void => {
       game.gid = gid;
+      game.side = side;
       let idtag = document.getElementById("gameId");
       if (idtag) idtag.innerHTML = `${gid}`;
     };
-    this.joinGameSuccess = ({ gid }: { gid: string }) => {
+
+    this.joinGameSuccess = ({ gid, side }: { gid: string; side: Side }) => {
       game.gid = gid;
+      game.side = side;
       let idtag = document.getElementById("gameId");
       if (idtag) idtag.innerHTML = `${gid}`;
     };
@@ -79,29 +86,35 @@ export class IO {
     this.socket.on("connected", this.connected);
 
     this.socket.on("newGameSuccess", this.newGameSuccess);
+    this.socket.on("newGameFailed", this.newGameFailed);
+
     this.socket.on("joinGameSuccess", this.joinGameSuccess);
+    this.socket.on("joinGameFailed", this.joinGameFailed);
 
     this.socket.on("playerJoinedRoom", this.playerJoinedRoom);
-    this.socket.on("playerLeftRoom", this.playerLeftRoom);
+
     this.socket.on("update", this.update);
 
+    this.socket.on("playerLeftRoom", this.playerLeftRoom);
     this.socket.on("error", this.error);
-    this.socket.on("joinGameFailed", this.joinGameFailed);
-    this.socket.on("newGameFailed", this.newGameFailed);
   }
 
-  newGame() {
-    this.socket.emit("newGame");
+  newGame(name: string) {
+    this.socket.emit("newGame", { name });
   }
 
   newGameFailed({ message }: { message: string }) {
     alert(message);
   }
 
-  joinGame(gid: string) {
-    this.socket.emit("joinGame", { gid: gid });
+  joinGame(gid: string, name: string) {
+    this.socket.emit("joinGame", { gid, name });
   }
   joinGameFailed({ message }: { message: string }) {
     alert(message);
+  }
+
+  action(action: Action) {
+    this.socket.emit("clientAction", { action });
   }
 }

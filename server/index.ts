@@ -1,12 +1,21 @@
-const express = require("express");
-require("dotenv").config();
-const { createServer } = require("http");
-const { Server } = require("socket.io");
-const path = require("path");
-const { initGame, purgeGames } = require("./game");
+import express from "express";
+import { createServer } from "http";
+import { Server } from "socket.io";
+import path from "path";
+import env from "dotenv";
+import { initGame, purgeGames } from "./game";
+// import {
+//   ServerToClientEvents,
+//   ClientToServerEvents,
+// } from "../src/utils/events";
+
+env.config();
+
 const app = express();
-app.use(express.static(path.resolve(__dirname, "../build")));
+app.use(express.static(path.resolve(__dirname, "../../build")));
+
 const httpServer = createServer(app);
+
 const io = new Server(httpServer, {
   /* options */
 });

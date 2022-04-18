@@ -1,9 +1,9 @@
 import { default as Ball } from "./ball";
 import { default as Paddle } from "./paddle";
 import { IO } from "../io";
-import { Action, GameObjectState, GameState } from "./types";
+import { Action, GameObjectState, GameState, Side } from "./types";
 
-const { InputHandler } = require("./input");
+import { InputHandler } from "./input";
 
 export function updatePosition(state: GameObjectState, dt: number) {
   return {
@@ -19,53 +19,38 @@ export class clientGame {
   ctx?: CanvasRenderingContext2D;
   io: IO;
   backgroundImage: HTMLImageElement;
-  score = { right: 0, left: 0 };
   actionBuffer: Action[] = [];
+  prevVerifiedState: GameState;
   verifiedState: GameState;
-  self: Paddle;
-  opponent: Paddle;
-  ball: Ball;
-  gameObjects: (Ball | Paddle)[];
+  gameObjects: { self: Paddle; opponent: Paddle; ball: Ball };
+  side: Side = "left";
 
   constructor(ctx?: CanvasRenderingContext2D) {
     this.verifiedState = {
+      score: { right: 0, left: 0 },
+      status: "paused",
       timestamp: Date.now(),
-      index: 1,
-      self: {
-        position: {
-          x: 0,
-          y: 0.5,
-        },
-        velocity: {
-          x: 0,
-          y: 0,
-        },
+      left: {
+        position: { x: 0, y: 0.5 },
+        velocity: { x: 0, y: 0 },
       },
-      opponent: {
-        position: {
-          x: 1,
-          y: 0.5,
-        },
-        velocity: {
-          x: 0,
-          y: 0,
-        },
+      right: {
+        position: { x: 1, y: 0.5 },
+        velocity: { x: 0, y: 0 },
       },
       ball: {
-        position: {
-          x: 0.5,
-          y: 0.5,
-        },
-        velocity: {
-          x: 0.01,
-          y: 0.01,
-        },
+        position: { x: 0.5, y: 0.5 },
+        velocity: { x: 0.01, y: 0.01 },
       },
     };
-    this.self = new Paddle(this.verifiedState.self);
-    this.opponent = new Paddle(this.verifiedState.opponent);
-    this.ball = new Ball(this.verifiedState.ball);
-    this.gameObjects = [this.self, this.opponent, this.ball];
+    this.prevVerifiedState = this.verifiedState;
+    this.gameObjects = {
+      self: new Paddle(this.verifiedState[this.side]),
+      opponent: new Paddle(
+        this.verifiedState[this.side === "left" ? "right" : "left"]
+      ),
+      ball: new Ball(this.verifiedState.ball),
+    };
     this.actionBuffer = [];
     this.ctx = ctx;
     new InputHandler(this, { up: "ArrowUp", down: "ArrowDown" });
@@ -76,31 +61,27 @@ export class clientGame {
     this.io = new IO(this);
   }
 
-  moveUp() {
-    console.log("move up");
+  action(a: Action) {
+    this.actionBuffer.push(a);
+    this.io.action(a);
+  }
 
-    this.actionBuffer.push({
-      target: "self",
+  moveUp() {
+    this.action({
       payload: { velocity: { x: 0, y: -0.3 } },
       timestamp: Date.now(),
     });
   }
 
   moveDown() {
-    console.log("move down");
-
-    this.actionBuffer.push({
-      target: "self",
+    this.action({
       payload: { velocity: { x: 0, y: 0.3 } },
       timestamp: Date.now(),
     });
   }
 
   stop() {
-    console.log("stop");
-
-    this.actionBuffer.push({
-      target: "self",
+    this.action({
       payload: { velocity: { x: 0, y: 0 } },
       timestamp: Date.now(),
     });
@@ -127,41 +108,55 @@ export class clientGame {
       }
 
       // Draw the game objects
-      this.gameObjects.forEach((obj) => this.ctx && obj.draw(this.ctx));
+      Object.values(this.gameObjects).forEach(
+        (obj) => this.ctx && obj.draw(this.ctx)
+      );
     }
   }
 
   update() {
     let now = Date.now();
+    if (this.verifiedState.status === "playing") {
+      if (!this.gameObjects.ball)
+        this.gameObjects.ball = new Ball(this.verifiedState.ball);
+      // filer out actions that occur in the future and sort in chronological order
+      let actions = this.actionBuffer
+        .filter((value) => value.timestamp < now)
+        .sort((a, b) => a.timestamp - b.timestamp);
 
-    // filer out actions that occur in the future and sort in chronological order
-    let actions = this.actionBuffer
-      .filter((value) => value.timestamp < now)
-      .sort((a, b) => a.timestamp - b.timestamp);
+      // reset object states to last verified state
+      this.gameObjects.self.state = this.verifiedState[this.side];
+      this.gameObjects.ball.state = this.verifiedState.ball;
 
-    // reset object states to last verified state
-    this.self.state = this.verifiedState.self;
-    this.opponent.state = this.verifiedState.opponent;
-    this.ball.state = this.verifiedState.ball;
+      // set starting time as verified timestamp
+      let prevTime = this.verifiedState.timestamp;
 
-    // set starting time as verified timestamp
-    let prevTime = this.verifiedState.timestamp;
+      // update state from action to action
+      let dt: number;
+      for (const action of actions) {
+        dt = action.timestamp - prevTime;
 
-    // update state from action to action
-    let dt: number;
-    for (const action of actions) {
-      dt = action.timestamp - prevTime;
+        this.gameObjects.self.update(dt);
+        this.gameObjects.ball.update(dt);
 
-      this.gameObjects.forEach((obj) => obj.update(dt));
+        this.gameObjects.self.state = {
+          ...this.gameObjects.self.state,
+          ...action.payload,
+        };
 
-      this[action.target].state = {
-        ...this[action.target].state,
-        ...action.payload,
-      };
+        prevTime = action.timestamp;
+      }
+      this.gameObjects.self.update(now - prevTime);
+      this.gameObjects.ball.update(now - prevTime);
 
-      prevTime = action.timestamp;
+      this.gameObjects.opponent.interpolate(
+        this.prevVerifiedState[this.side === "left" ? "right" : "left"],
+        this.prevVerifiedState.timestamp,
+        this.verifiedState[this.side === "left" ? "right" : "left"],
+        this.verifiedState.timestamp,
+        now - 100
+      );
     }
-    this.gameObjects.forEach((obj) => obj.update(now - prevTime));
   }
 
   setContext(ctx: CanvasRenderingContext2D) {

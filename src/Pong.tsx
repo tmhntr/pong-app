@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useRef } from "react";
 import { clientGame } from "./utils/game";
 
 const Pong: React.FC<{ game: clientGame }> = ({ game }) => {
@@ -20,7 +20,7 @@ const Pong: React.FC<{ game: clientGame }> = ({ game }) => {
         setInterval(() => {
           game.update();
           game.draw();
-        }, 100);
+        }, 20);
       }
     }
   }, []);

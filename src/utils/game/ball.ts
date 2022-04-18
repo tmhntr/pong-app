@@ -1,5 +1,5 @@
 import { updatePosition } from ".";
-import { CoordinateData, GameObject, GameObjectState } from "./types";
+import { GameObject, GameObjectState } from "./types";
 
 // const Ball = {
 //   HEIGHT: 16,
@@ -19,6 +19,7 @@ import { CoordinateData, GameObject, GameObjectState } from "./types";
 export default class Ball implements GameObject {
   HEIGHT: number = 0.025;
   WIDTH: number = 0.025;
+  nextBounce: number = 0;
   state: GameObjectState;
 
   constructor(state: GameObjectState) {
@@ -27,6 +28,14 @@ export default class Ball implements GameObject {
 
   update(dt: number) {
     this.state.position = updatePosition(this.state, dt);
+    if (this.state.position.y <= 0 + this.HEIGHT / 2) {
+      this.state.position.y = 0 + this.HEIGHT / 2;
+      this.state.velocity.y = -this.state.velocity.y;
+    }
+    if (this.state.position.y >= 1 - this.HEIGHT / 2) {
+      this.state.position.y = 1 - this.HEIGHT / 2;
+      this.state.velocity.y = -this.state.velocity.y;
+    }
   }
 
   draw(ctx: CanvasRenderingContext2D) {
