@@ -15,6 +15,7 @@ class ClientGame implements Game {
   ctx?: CanvasRenderingContext2D;
   io: IO;
   backgroundImage: HTMLImageElement;
+  inputHandler: InputHandler;
 
   constructor(ctx?: CanvasRenderingContext2D) {
     this.entities = {
@@ -24,7 +25,10 @@ class ClientGame implements Game {
     };
 
     this.ctx = ctx;
-    new InputHandler(this, { up: "ArrowUp", down: "ArrowDown" });
+    this.inputHandler = new InputHandler(this, {
+      up: "ArrowUp",
+      down: "ArrowDown",
+    });
 
     this.backgroundImage = new Image();
     this.backgroundImage.src = "/tennis-court.png";
@@ -169,6 +173,7 @@ class ClientGame implements Game {
 
   setContext(ctx: CanvasRenderingContext2D) {
     this.ctx = ctx;
+    this.inputHandler.touchHandler(this);
   }
 }
 
