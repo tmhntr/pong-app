@@ -1,56 +1,73 @@
-import { updatePosition } from ".";
-import { GameObject, GameObjectState } from "./types";
+import ClientGame from "./clientGame";
+import {
+  Action,
+  CoordinateData,
+  GameObject,
+  GameObjectState,
+  Side,
+} from "./types";
 
 export default class Paddle implements GameObject {
   HEIGHT: number = 0.25;
   WIDTH: number = 0.025;
+  speed: number = 0.3;
+  move: -1 | 0 | 1 = 0;
   state: GameObjectState;
+  positionBuffer: { position: CoordinateData; timestamp: number }[] = [];
+  last_ts: number | undefined;
+  inputSeqNumber: number = 0;
+  entityId: Side;
+  actionBuffer: Action[] = [];
+  game?: ClientGame;
+  mode: "client" | "server";
 
-  constructor(state: GameObjectState) {
-    this.state = state;
-  }
-
-  update(dt: number) {
-    this.state.position = updatePosition(this.state, dt);
-    if (this.state.position.y <= 0 + this.HEIGHT / 2) {
-      this.state.position.y = 0 + this.HEIGHT / 2;
-    }
-    if (this.state.position.y >= 1 - this.HEIGHT / 2) {
-      this.state.position.y = 1 - this.HEIGHT / 2;
-    }
-  }
-
-  _interpolateOne(
-    v_1: number,
-    v_2: number,
-    t_1: number,
-    t_2: number,
-    t: number
+  constructor(
+    position: CoordinateData,
+    id: Side,
+    game?: ClientGame,
+    mode: "client" | "server" = "client"
   ) {
-    return v_1 + ((t - t_1) / (t_2 - t_1)) * (v_2 - v_1);
+    this.state = { position };
+    this.entityId = id;
+    this.game = game;
+    this.mode = mode;
   }
-  interpolate(
-    pastState: GameObjectState,
-    pastTime: number,
-    futureState: GameObjectState,
-    futureTime: number,
-    now: number
-  ) {
+
+  update() {
+    // Compute delta time since last update.
+    var now_ts = Date.now();
+    var last_ts = this.last_ts || now_ts;
+    var dt_sec = (now_ts - last_ts) / 1000.0;
+    this.last_ts = now_ts;
+
+    // Package player's input.
+    var action = {
+      moveTime: dt_sec * -this.move,
+      inputSeqNumber: this.inputSeqNumber++,
+      entityId: this.entityId,
+    };
+
+    // Do client-side prediction.
+    this.applyAction(action);
+
+    // Save this input for later reconciliation.
+    this.mode === "client" && this.actionBuffer.push(action);
+
+    if (!!this.game && this.game.side === this.entityId)
+      this.game.io.socket.emit("clientAction", { action });
+  }
+
+  applyAction(action: Action) {
+    let y = this.state.position.y + this.speed * action.moveTime;
+    y =
+      y >= 1 - this.HEIGHT / 2
+        ? 1 - this.HEIGHT / 2
+        : y <= 0 + this.HEIGHT / 2
+        ? 0 + this.HEIGHT / 2
+        : y;
     this.state.position = {
-      x: this._interpolateOne(
-        pastState.position.x,
-        futureState.position.x,
-        pastTime,
-        futureTime,
-        now
-      ),
-      y: this._interpolateOne(
-        pastState.position.y,
-        futureState.position.y,
-        pastTime,
-        futureTime,
-        now
-      ),
+      x: this.state.position.x,
+      y: y,
     };
   }
 

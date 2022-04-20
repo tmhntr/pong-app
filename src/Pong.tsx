@@ -1,7 +1,7 @@
 import React, { useEffect, useRef } from "react";
-import { clientGame } from "./utils/game";
+import { ClientGame } from "./utils/game";
 
-const Pong: React.FC<{ game: clientGame }> = ({ game }) => {
+const Pong: React.FC<{ game: ClientGame }> = ({ game }) => {
   const GAME_WIDTH = 800;
   const GAME_HEIGHT = 600;
   let ctx: CanvasRenderingContext2D | null = null;
@@ -16,10 +16,10 @@ const Pong: React.FC<{ game: clientGame }> = ({ game }) => {
       ctx = canvasRef.current.getContext("2d");
       if (ctx) {
         game.setContext(ctx);
-        game.draw();
+        game.render();
         setInterval(() => {
           game.update();
-          game.draw();
+          game.render();
         }, 20);
       }
     }

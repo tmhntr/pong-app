@@ -1,8 +1,8 @@
 import React, { useState } from "react";
 import Pong from "./Pong";
-import { clientGame } from "./utils/game";
+import { ClientGame } from "./utils/game";
 
-const WaitingPage: React.FC<{ game: clientGame }> = ({ game }) => {
+const WaitingPage: React.FC<{ game: ClientGame }> = ({ game }) => {
   const [code, setCode] = useState("");
   const [name, setName] = useState("Player");
   const [waiting, setWaiting] = useState(true);

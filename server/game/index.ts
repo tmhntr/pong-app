@@ -3,7 +3,7 @@ import { DefaultEventsMap } from "socket.io/dist/typed-events";
 import { ClientToServerEvents, ServerToClientEvents } from "src/utils/events";
 import { Side } from "src/utils/game/types";
 import { v4 as uuid } from "uuid";
-import ServerGame, { ServerAction } from "./game";
+import ServerGame from "./game";
 var io: Server<ClientToServerEvents, ServerToClientEvents>;
 var gameSocket: Socket<
   ClientToServerEvents,
@@ -12,10 +12,11 @@ var gameSocket: Socket<
   any
 >;
 type GameInstance = {
+  sendUpdateInterval?: NodeJS.Timeout;
   updateInterval?: NodeJS.Timeout;
   game: ServerGame;
-  left: string | null;
-  right: string | null;
+  left: Socket | null;
+  right: Socket | null;
 };
 const currentInstances: {
   [index: string]: GameInstance;
@@ -27,28 +28,30 @@ const currentPlayers: {
 export function purgeGames() {
   Object.keys(currentInstances).forEach((gid) => {
     if (!currentInstances[gid].left && !currentInstances[gid].right) {
-      let interval = currentInstances[gid].updateInterval;
-      interval && clearInterval(interval);
+      let sendInterval = currentInstances[gid].sendUpdateInterval;
+      sendInterval && clearInterval(sendInterval);
+      let upInterval = currentInstances[gid].updateInterval;
+      upInterval && clearInterval(upInterval);
       delete currentInstances[gid];
     }
   });
 }
 
-function playerLeaveGame(id: string) {
-  if (currentPlayers[id]) {
-    console.log(`Player ${currentPlayers[id].name} left the game`);
-    let gameId = currentPlayers[id].gameId;
+function playerLeaveGame(socket: Socket) {
+  if (socket.id in currentPlayers) {
+    console.log(`Player ${currentPlayers[socket.id].name} left the game`);
+    let { gameId } = currentPlayers[socket.id];
     if (gameId) {
       let instance = currentInstances[gameId];
       if (instance) {
         instance.game.pause();
-        if (id === instance.left) {
+        if (socket === instance.left) {
           instance.left = null;
         }
-        if (id === instance.right) {
+        if (socket === instance.right) {
           instance.right = null;
         }
-        delete currentPlayers[id];
+        delete currentPlayers[socket.id];
       }
     }
   }
@@ -57,27 +60,22 @@ function playerLeaveGame(id: string) {
 export function initGame(sio: Server, socket: Socket) {
   io = sio;
   gameSocket = socket;
-  let updateInterval: NodeJS.Timer;
 
   gameSocket.emit("connected", { message: "Connected successfully" });
 
-  gameSocket.on("clientAction", (data) => {
+  gameSocket.on("clientAction", ({ action }) => {
     // get current game
-    let gameId = currentPlayers[socket.id].gameId;
-    if (gameId) {
-      let instance = currentInstances[gameId];
 
-      try {
-        let serverAction: ServerAction = {
-          player: socket.id === instance.left ? "left" : "right",
-          payload: data.action.payload,
-          timestamp: data.action.timestamp,
-        };
-        instance.game.actionBuffer.push(serverAction);
-        // move paddle if playing
-      } catch (error) {
-        gameSocket.emit("error", { message: "An error occurred" });
+    try {
+      let { gameId } = currentPlayers[socket.id];
+      if (gameId) {
+        let instance = currentInstances[gameId];
+        instance.game.actionQueue.push(action);
       }
+
+      // move paddle if playing
+    } catch (error) {
+      gameSocket.emit("error", { message: "An error occurred" });
     }
   });
 
@@ -96,7 +94,7 @@ export function initGame(sio: Server, socket: Socket) {
     currentInstances[gid] = instance;
 
     // assign player to left paddle
-    instance.left = socket.id;
+    instance.left = socket;
 
     // add player as current player
     currentPlayers[socket.id] = { gameId: gid, name: name };
@@ -118,10 +116,10 @@ export function initGame(sio: Server, socket: Socket) {
 
       // assign player to an open side
       if (!instance.right) {
-        instance.right = socket.id;
+        instance.right = socket;
         side = "right";
       } else if (!instance.left) {
-        instance.left = socket.id;
+        instance.left = socket;
         side = "left";
       }
       // error if game is full
@@ -144,10 +142,40 @@ export function initGame(sio: Server, socket: Socket) {
         console.log("starting game");
 
         instance.game.play();
+        instance.sendUpdateInterval = setInterval(() => {
+          instance.left?.emit("update", {
+            state: {
+              entities: {
+                ball: instance.game.entities.ball.state,
+                left: instance.game.entities.left.state,
+                right: instance.game.entities.right.state,
+              },
+              score: instance.game.score,
+              status: instance.game.status,
+              timestamp: Date.now(),
+              index: instance.game.lastProcessedAction.left,
+              nextBounce: instance.game.nextBounce,
+            },
+          });
+          instance.right?.emit("update", {
+            state: {
+              entities: {
+                ball: instance.game.entities.ball.state,
+                left: instance.game.entities.left.state,
+                right: instance.game.entities.right.state,
+              },
+              score: instance.game.score,
+              status: instance.game.status,
+              timestamp: Date.now(),
+              index: instance.game.lastProcessedAction.left,
+              nextBounce: instance.game.nextBounce,
+            },
+          });
+          instance.game.nextBounce = undefined;
+        }, 100);
         instance.updateInterval = setInterval(() => {
           instance.game.update();
-          io.to(gid).emit("update", { state: instance.game.state });
-        });
+        }, 50);
       }
     } catch (error) {
       gameSocket.emit("joinGameFailed", {
@@ -157,7 +185,7 @@ export function initGame(sio: Server, socket: Socket) {
   });
 
   gameSocket.on("disconnect", (reason) => {
-    playerLeaveGame(socket.id);
+    playerLeaveGame(socket);
   });
 }
 

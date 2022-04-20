@@ -1,10 +1,10 @@
-import { clientGame } from "./game";
 import { io, Socket } from "socket.io-client";
 import { ClientToServerEvents, ServerToClientEvents } from "./events";
 import { Action, GameState, Side } from "./game/types";
+import ClientGame from "./game/clientGame";
 
 export class IO {
-  game: clientGame;
+  game: ClientGame;
   socket: Socket<ServerToClientEvents, ClientToServerEvents>;
   gid: string | null;
   connected: (data: { message: string }) => void;
@@ -13,11 +13,10 @@ export class IO {
   error: (data: { message: string }) => void;
   update: (data: { state: GameState }) => void;
 
-  clientAction: (data: Action) => void;
   newGameSuccess: ({ gid, side }: { gid: string; side: Side }) => void;
   joinGameSuccess: ({ gid, side }: { gid: string; side: Side }) => void;
 
-  constructor(game: clientGame) {
+  constructor(game: ClientGame) {
     const socket = io();
     this.socket = socket;
     this.game = game;
@@ -41,18 +40,9 @@ export class IO {
     };
 
     this.update = ({ state }) => {
-      game.prevVerifiedState = game.verifiedState;
-      game.verifiedState = state;
-
-      game.actionBuffer = game.actionBuffer.filter(
-        (val) => val.timestamp > state.timestamp
-      );
+      game.serverUpdate(state);
 
       // socket.emit("action", { action: game.getAction() });
-    };
-
-    this.clientAction = (action: Action) => {
-      socket.emit("clientAction", { action });
     };
 
     this.newGameSuccess = ({
