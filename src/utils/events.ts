@@ -6,7 +6,11 @@ export interface ServerToClientEvents {
   // game initialization
   newGameSuccess: (data: { gid: string; side: Side }) => void;
   newGameFailed: (error: { message: string }) => void;
-  joinGameSuccess: (data: { gid: string; side: Side }) => void;
+  joinGameSuccess: (data: {
+    gid: string;
+    side: Side;
+    opponentName?: string;
+  }) => void;
   joinGameFailed: (error: { message: string }) => void;
   playerJoinedRoom: (data: { playerName: string }) => void;
 

@@ -38,22 +38,17 @@ export function purgeGames() {
 }
 
 function playerLeaveGame(socket: Socket) {
-  if (socket.id in currentPlayers) {
-    console.log(`Player ${currentPlayers[socket.id].name} left the game`);
+  try {
     let { gameId } = currentPlayers[socket.id];
-    if (gameId) {
-      let instance = currentInstances[gameId];
-      if (instance) {
-        instance.game.pause();
-        if (socket === instance.left) {
-          instance.left = null;
-        }
-        if (socket === instance.right) {
-          instance.right = null;
-        }
-        delete currentPlayers[socket.id];
-      }
+    let instance = gameId ? currentInstances[gameId] : null;
+    if (instance) {
+      instance.game.pause();
+      if (instance.left === socket) instance.left = null;
+      if (instance.right === socket) instance.left = null;
     }
+    delete currentPlayers[socket.id];
+  } catch (error) {
+    console.log(error);
   }
 }
 
@@ -108,6 +103,8 @@ export function initGame(sio: Server, socket: Socket) {
 
   gameSocket.on("joinGame", ({ gid, name }) => {
     // get game using game id
+    // console.log(gid);
+
     let instance = currentInstances[gid];
     let side: Side;
     try {
@@ -135,11 +132,17 @@ export function initGame(sio: Server, socket: Socket) {
 
       // add player as current player
       currentPlayers[socket.id] = { gameId: gid, name: name };
-
-      gameSocket.emit("joinGameSuccess", { gid, side });
+      let opponentSocket = instance[side === "left" ? "right" : "left"];
+      let opponentId = opponentSocket ? opponentSocket.id : null;
+      let opponentName = opponentId ? currentPlayers[opponentId].name : null;
+      gameSocket.emit("joinGameSuccess", {
+        gid,
+        side,
+        opponentName: opponentName ? opponentName : undefined,
+      });
       // start game if there are two players
       if (instance.left && instance.right) {
-        console.log("starting game");
+        console.log("starting game", gid);
 
         instance.game.play();
         instance.sendUpdateInterval = setInterval(() => {
