@@ -93,12 +93,14 @@ export class InputHandler {
     document.addEventListener("keydown", (event) => {
       switch (event.key) {
         case keys.up:
+          event.preventDefault();
           game.moveUp();
           this.action = 2;
           break;
 
         case keys.down:
           game.moveDown();
+          event.preventDefault();
           this.action = 0;
           break;
         default:

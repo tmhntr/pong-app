@@ -14,7 +14,15 @@ export class IO {
   update: (data: { state: GameState }) => void;
 
   newGameSuccess: ({ gid, side }: { gid: string; side: Side }) => void;
-  joinGameSuccess: ({ gid, side }: { gid: string; side: Side }) => void;
+  joinGameSuccess: ({
+    gid,
+    side,
+    opponentName,
+  }: {
+    gid: string;
+    side: Side;
+    opponentName?: string;
+  }) => void;
 
   constructor(game: ClientGame) {
     const socket = io();
@@ -28,6 +36,8 @@ export class IO {
     };
 
     this.playerJoinedRoom = (data) => {
+      console.log(data);
+
       game.oponentName = data.playerName;
     };
 
@@ -52,15 +62,27 @@ export class IO {
       gid: string;
       side: Side;
     }): void => {
+      console.log(gid);
+
       game.gid = gid;
+      console.log(game);
       game.side = side;
       let idtag = document.getElementById("gameId");
       if (idtag) idtag.innerHTML = `${gid}`;
     };
 
-    this.joinGameSuccess = ({ gid, side }: { gid: string; side: Side }) => {
+    this.joinGameSuccess = ({
+      gid,
+      side,
+      opponentName,
+    }: {
+      gid: string;
+      side: Side;
+      opponentName?: string;
+    }) => {
       game.gid = gid;
       game.side = side;
+      if (opponentName) game.oponentName = opponentName;
       let idtag = document.getElementById("gameId");
       if (idtag) idtag.innerHTML = `${gid}`;
     };
@@ -90,6 +112,7 @@ export class IO {
   }
 
   newGame(name: string) {
+    this.game.playerName = name;
     this.socket.emit("newGame", { name });
   }
 
@@ -98,6 +121,7 @@ export class IO {
   }
 
   joinGame(gid: string, name: string) {
+    this.game.playerName = name;
     this.socket.emit("joinGame", { gid, name });
   }
   joinGameFailed({ message }: { message: string }) {
