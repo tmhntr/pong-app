@@ -76,7 +76,7 @@ export function initGame(sio: Server, socket: Socket) {
 
   gameSocket.on("newGame", ({ name }) => {
     // create game id
-    let gid = uuid();
+    let gid = uuid().split("-")[0];
 
     // greate new game
     let instance: GameInstance = {
