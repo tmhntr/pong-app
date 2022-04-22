@@ -1,42 +1,29 @@
-import { Action, Position, Score, ServerUpdate } from "../../src/Pong/types";
+import {
+  Action,
+  Entities,
+  Position,
+  Score,
+  ServerUpdate,
+} from "../../src/Pong/types";
+import { CLIENT_UPDATE_FREQ } from "../../src/Pong/clientGame";
 // import { InputHandler, RemoteInputHandler } from "./input";
-
+import { v4 as uuid } from "uuid";
+import { ball, paddle } from "../../src/Pong/helpers";
 // type gameObject = Ball | Paddle;
 
-const paddle = {
-  width: 0.025,
-  height: 0.3,
-  speed: 0.3,
-};
-
-const ball = {
-  height: 0.025,
-  width: 0.025 * (3 / 4),
-};
-type Entity = { x: number; y: number; actionIndex: number };
 export default class ServerGame {
   actionQueue: Action[] = [];
   updateFrequency = 20;
-  sendFrequency = 100;
+  sendFrequency = 10;
   paddleSpeed = 0.3;
-  entities: {
-    ball: { x: number; y: number; vx: number; vy: number; actionIndex: number };
-    [index: string]: {
-      x: number;
-      y: number;
-      vx?: number;
-      vy?: number;
-      actionIndex: number;
-    };
-  };
+  entities: Entities = {};
   status: "playing" | "paused" = "paused";
   score: Score = { left: 0, right: 0 };
   nextBounce: number = 0;
 
   constructor() {
-    this.entities = {
-      ball: { x: 0.5, y: 0.5, vx: 0.3, vy: 0, actionIndex: 0 },
-    };
+    this.entities = {};
+    this.resetBall();
   }
 
   play() {
@@ -48,36 +35,50 @@ export default class ServerGame {
   }
 
   applyAction(action: Action) {
-    if (action.entityId in this.entities) {
-      let entity = this.entities[action.entityId];
-      this.entities[action.entityId].y =
-        entity.y + (action.move * paddle.speed) / this.updateFrequency;
-      if (this.entities[action.entityId].actionIndex < action.inputSeqNumber)
-        this.entities[action.entityId].actionIndex = action.inputSeqNumber;
+    try {
+      if (this.entities[action.entityId]) {
+        this.entities[action.entityId].y +=
+          (action.move * paddle.vy) / CLIENT_UPDATE_FREQ;
+        if (
+          !this.entities[action.entityId].actionIndex ||
+          this.entities[action.entityId].actionIndex < action.inputSeqNumber
+        )
+          this.entities[action.entityId].actionIndex = action.inputSeqNumber;
+      }
+    } catch (error) {
+      console.log(error);
     }
   }
 
   update() {
     // let dt = now - this.state.timestamp;
     if (this.status === "playing") {
-      let action = this.actionQueue.shift();
-      while (action) {
-        this.applyAction(action);
+      let actions = this.actionQueue;
+      this.actionQueue = [];
+      actions.forEach((action) => this.applyAction(action));
 
-        action = this.actionQueue.shift();
-      }
+      Object.keys(this.entities).forEach((key) => {
+        if (this.entities[key].type === "paddle") {
+          if (this.entities[key].y > 1 - paddle.height / 2) {
+            this.entities[key].y = 1 - paddle.height / 2;
+          }
+          if (this.entities[key].y < paddle.height / 2) {
+            this.entities[key].y = paddle.height / 2;
+          }
+        }
+      });
 
-      if (this.updateBall()) {
-        this.nextBounce = -0.3 + 0.6 * Math.random();
-      }
+      let ballEntity = this.updateBall();
 
-      if (this.entities.ball.x > 1) {
-        this.resetBall();
-        this.score.left++;
-      }
-      if (this.entities.ball.x < 0) {
-        this.resetBall();
-        this.score.right++;
+      if (ballEntity) {
+        if (ballEntity.x > 1) {
+          this.resetBall();
+          this.score.left++;
+        }
+        if (ballEntity.x < 0) {
+          this.resetBall();
+          this.score.right++;
+        }
       }
     } else {
       this.actionQueue.forEach((action) => {
@@ -89,62 +90,65 @@ export default class ServerGame {
   }
 
   updateBall() {
-    let ballEntity = this.entities.ball;
-    let x = ballEntity.x + ballEntity.vx / this.updateFrequency;
-    let y = ballEntity.y + ballEntity.vy / this.updateFrequency;
+    let ballId = Object.keys(this.entities).find(
+      (key) => this.entities[key].type === "ball"
+    );
 
-    if (y <= 0 + ball.height / 2) {
-      y = 0 + ball.height / 2;
-      ballEntity.vy = -ballEntity.vy;
-    }
-    if (y >= 1 - ball.height / 2) {
-      y = 1 - ball.height / 2;
-      ballEntity.vy = -ballEntity.vy;
-    }
+    if (ballId) {
+      this.entities[ballId].x =
+        this.entities[ballId].x + ball.vx / this.updateFrequency;
+      this.entities[ballId].y =
+        this.entities[ballId].y - ball.vy / this.updateFrequency;
 
-    this.entities.ball = {
-      ...ballEntity,
-      x,
-      y,
-    };
+      if (this.entities[ballId].y <= 0 + ball.height / 2) {
+        this.entities[ballId].y = 0 + ball.height / 2;
+        ball.vy = -ball.vy;
+      }
+      if (this.entities[ballId].y >= 1 - ball.height / 2) {
+        this.entities[ballId].y = 1 - ball.height / 2;
+        ball.vy = -ball.vy;
+      }
 
-    for (let entityId in this.entities) {
-      if (entityId !== "ball") {
-        if (detectCollision(this.entities.ball, this.entities[entityId])) {
-          this.entities.ball.x =
-            this.entities.ball.x < 0.5
-              ? paddle.width / 2 + ball.width / 2
-              : 1 - paddle.width / 2 - ball.width / 2;
-          this.entities.ball.vx = -this.entities.ball.vx;
-          this.entities.ball.vy = this.nextBounce;
-          return true;
+      for (let entityId in this.entities) {
+        if (entityId !== ballId) {
+          if (detectCollision(this.entities[ballId], this.entities[entityId])) {
+            if (this.entities[ballId].x < 0.5) {
+              this.entities[ballId].x = paddle.width / 2 + ball.width / 2;
+              ball.vx = Math.abs(ball.vx);
+            }
+            if (this.entities[ballId].x > 0.5) {
+              this.entities[ballId].x = 1 - paddle.width / 2 - ball.width / 2;
+              ball.vx = -Math.abs(ball.vx);
+            }
+            ball.vy = this.nextBounce;
+            this.nextBounce = -0.2 + 0.4 * Math.random();
+          }
         }
       }
+
+      return this.entities[ballId];
     }
-    return false;
+    return null;
   }
 
   resetBall() {
-    this.entities.ball = {
+    Object.keys(this.entities).forEach((id) => {
+      if (this.entities[id].type === "ball") delete this.entities[id];
+    });
+    ball.vy = this.nextBounce;
+    ball.vx = Math.random() < 0.5 ? -0.25 : 0.25;
+    this.nextBounce = -0.2 + 0.4 * Math.random();
+    this.entities[uuid().split("-")[0]] = {
       x: 0.5,
       y: 0.5,
-      vx: Math.random() > 0.5 ? 0.3 : -0.3,
-      vy: -0.02 + 0.04 * Math.random(),
       actionIndex: 0,
+      type: "ball",
     };
   }
 
   getServerState(): ServerUpdate {
-    let entities: { [index: string]: Entity } = {};
-    for (let entityId in this.entities) {
-      entities[entityId] = {
-        x: this.entities[entityId].x,
-        y: this.entities[entityId].y,
-        actionIndex: this.entities[entityId].actionIndex,
-      };
-    }
     return {
-      entities,
+      entities: this.entities,
       score: this.score,
       status: this.status,
       timestamp: Date.now(),
@@ -152,19 +156,16 @@ export default class ServerGame {
   }
 }
 
-export const detectCollision = (
-  ballEntity: Position,
-  paddleEntity: Position
-) => {
-  let bottomOfBall = ballEntity.y + ball.height / 2;
+const detectCollision = (ballEntity: Position, paddleEntity: Position) => {
   let topOfBall = ballEntity.y - ball.height / 2;
+  let bottomOfBall = ballEntity.y + ball.height / 2;
   let leftOfBall = ballEntity.x - ball.width / 2;
   let rightOfBall = ballEntity.x + ball.width / 2;
 
   let topOfObject = paddleEntity.y - paddle.height / 2;
+  let bottomOfObject = paddleEntity.y + paddle.height / 2;
   let leftSideOfObject = paddleEntity.x - paddle.width / 2;
   let rightSideOfObject = paddleEntity.x + paddle.width / 2;
-  let bottomOfObject = paddleEntity.y + paddle.height / 2;
 
   if (
     bottomOfBall >= topOfObject &&

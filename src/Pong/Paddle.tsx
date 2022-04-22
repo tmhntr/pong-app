@@ -8,8 +8,8 @@ const Paddle: FC<{ x: number; y: number }> = ({ x, y }) => {
         height: "25%",
         backgroundColor: "blue",
         position: "absolute",
-        top: y,
-        left: x,
+        top: `${(y - 0.125) * 100}%`,
+        left: `${(x - 0.0125) * 100}%`,
       }}
     ></div>
   );

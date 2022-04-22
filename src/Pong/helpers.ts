@@ -1,5 +1,11 @@
 import { Key } from "react";
-import { Entities, GameState, ServerUpdate } from "./types";
+import {
+  BallSpec,
+  Entities,
+  EntitySpec,
+  GameState,
+  ServerUpdate,
+} from "./types";
 
 export class InputHandler {
   currentTouchId: number | null;
@@ -18,12 +24,12 @@ export class InputHandler {
 
           if (canvasRect) {
             if (touch.clientY < (canvasRect.top + canvasRect.bottom) / 2) {
-              this.action = 1;
+              this.action = -1;
             } else if (
               touch.clientY >=
               (canvasRect.top + canvasRect.bottom) / 2
             ) {
-              this.action = -1;
+              this.action = 1;
             }
           }
         }
@@ -73,12 +79,12 @@ export class InputHandler {
 
               if (canvasRect && touch) {
                 if (touch.clientY < (canvasRect.top + canvasRect.bottom) / 2) {
-                  this.action = 1;
+                  this.action = -1;
                 } else if (
                   touch.clientY >=
                   (canvasRect.top + canvasRect.bottom) / 2
                 ) {
-                  this.action = -1;
+                  this.action = 1;
                 }
               }
             }
@@ -101,12 +107,16 @@ export class InputHandler {
       switch (event.key) {
         case keys.up:
           event.preventDefault();
-          this.action = 1;
+          console.log("up");
+
+          this.action = -1;
           break;
 
         case keys.down:
           event.preventDefault();
-          this.action = -1;
+          console.log("down");
+
+          this.action = 1;
           break;
         default:
           break;
@@ -122,13 +132,14 @@ export class InputHandler {
     });
 
     document.addEventListener("keyup", (event) => {
+      // console.log("keyup");
       switch (event.key) {
         case keys.up:
-          if (this.action === 1) this.action = 0;
+          if (this.action === -1) this.action = 0;
           break;
 
         case keys.down:
-          if (this.action === -1) this.action = 0;
+          if (this.action === 1) this.action = 0;
           break;
         default:
           break;
@@ -140,3 +151,16 @@ export class InputHandler {
     return this.action;
   }
 }
+
+export const paddle: EntitySpec = {
+  width: 0.025,
+  height: 0.3,
+  vy: 0.3,
+};
+
+export const ball: BallSpec = {
+  height: 0.025,
+  vx: 0.25,
+  vy: 0,
+  width: 0.025 * (3 / 4),
+};

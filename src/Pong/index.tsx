@@ -7,7 +7,7 @@ import Paddle from "./Paddle";
 import { v4 as uuid } from "uuid";
 
 import "./Pong.css";
-import { GameState, ServerUpdate } from "./types";
+import { Entities, Entity, GameState, Score, ServerUpdate } from "./types";
 import ClientGame from "./clientGame";
 
 import "./Pong.css";
@@ -16,11 +16,19 @@ const Pong: React.FC<{ name: string }> = ({ name }) => {
   let params = useParams();
   let gameId = params.gameId || uuid().split("-")[0];
 
-  const [state, setState] = useState<GameState>({
-    entities: {},
-    score: { left: 0, right: 0 },
-  });
-  const [pid, setPid] = useState<string | null>(null);
+  // const [state, setState] = useState<GameState>({
+  //   entities: {},
+  //   score: { left: 0, right: 0 },
+  // });
+
+  const [score, setScore] = useState<Score>({ left: 0, right: 0 });
+  const [entities, setEntities] = useState<Entity[]>([]);
+
+  const setState = (state: { entities?: Entities; score?: Score }) => {
+    if (state.entities) setEntities(Object.values(state.entities));
+    if (state.score) setScore(state.score);
+  };
+
   const [names, setNames] = useState<{
     left: string | null;
     right: string | null;
@@ -40,12 +48,9 @@ const Pong: React.FC<{ name: string }> = ({ name }) => {
   // }, []);
 
   useEffect(() => {
-    const game = new ClientGame(setState);
+    const game = new ClientGame(setState, setNames, gameId, name);
 
-    const IOhandler = new IO(setPid, setNames, game);
-    IOhandler.joinGame(gameId, name);
     game.start();
-    setInterval(() => console.log(state), 5000);
   }, []);
 
   return (
@@ -53,17 +58,13 @@ const Pong: React.FC<{ name: string }> = ({ name }) => {
       <div className="scoreboard">
         <div>{names.left}</div>
         <div>
-          {state.score.left}:{state.score.right}
+          {score.left}:{score.right}
         </div>
         <div>{names.right}</div>
       </div>
       <div id="game" ref={gameRef}>
-        {Object.keys(state.entities).map((entityId, index) =>
-          entityId === "ball" ? (
-            <Ball {...state.entities[entityId]} />
-          ) : (
-            <Paddle {...state.entities[entityId]} />
-          )
+        {entities.map((entity, index) =>
+          entity.type === "ball" ? <Ball {...entity} /> : <Paddle {...entity} />
         )}
       </div>
     </div>

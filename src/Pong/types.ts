@@ -1,10 +1,23 @@
-export type Entities = {
-  [index: string]: Position;
+export type Entity = Position & {
+  actionIndex: number;
+  type: "paddle" | "ball";
 };
 
+export type Entities = {
+  [index: string]: Entity;
+};
+export type EntitySpec = {
+  height: number;
+  width: number;
+  vx?: number;
+  vy: number;
+};
+export type BallSpec = EntitySpec & {
+  vx: number;
+};
 export type Position = { x: number; y: number };
 export type GameState = {
-  entities: { [index: string]: Position & { actionIndex: number } };
+  entities: Entities;
   score: { left: number; right: number };
   //   status: "playing" | "paused";
 };

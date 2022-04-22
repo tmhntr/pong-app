@@ -13,7 +13,6 @@ export class IO {
   nameUpdate: (data: { left: string | null; right: string | null }) => void;
 
   constructor(
-    setPid: (pid: string) => void,
     setNames: (names: { left: string | null; right: string | null }) => void,
     game: ClientGame
   ) {
@@ -26,8 +25,6 @@ export class IO {
     };
 
     this.nameUpdate = (data) => {
-      console.log(data);
-
       setNames(data);
     };
 
@@ -36,8 +33,6 @@ export class IO {
     };
 
     this.update = ({ state }) => {
-      console.log(state);
-
       game.pushState(state);
 
       // socket.emit("action", { action: game.getAction() });
@@ -46,7 +41,7 @@ export class IO {
     this.joinGameSuccess = ({ gid, pid }: { gid: string; pid: string }) => {
       // console.log("join success: ", gid, pid);
 
-      setPid(pid);
+      game.pid = pid;
     };
 
     this.bindEvents();

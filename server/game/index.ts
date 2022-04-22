@@ -75,22 +75,36 @@ export function initGame(sio: Server, socket: Socket) {
       let instance: GameInstance;
 
       if (gid in currentInstances) {
+        console.log("joining game ", gid);
+
         instance = currentInstances[gid];
         // assign player to an open side
         if (!instance.left) {
           instance.left = socket;
-          instance.game.entities[socket.id] = { x: 0, y: 0.5, actionIndex: -1 };
+          instance.game.entities[socket.id] = {
+            x: 0,
+            y: 0.5,
+            actionIndex: -1,
+            type: "paddle",
+          };
         } else if (!instance.right) {
           instance.right = socket;
-          instance.game.entities[socket.id] = { x: 1, y: 0.5, actionIndex: -1 };
+          instance.game.entities[socket.id] = {
+            x: 1,
+            y: 0.5,
+            actionIndex: -1,
+            type: "paddle",
+          };
         }
         // error if game is full
         else {
           throw { message: "Game full" };
         }
       } else {
+        console.log("creating new game ", gid);
+
         // greate new game
-        let gid = uuid().split("-")[0];
+        // let gid = uuid().split("-")[0];
 
         instance = {
           game: new ServerGame(),
@@ -103,7 +117,12 @@ export function initGame(sio: Server, socket: Socket) {
 
         // assign player to left paddle
         instance.left = socket;
-        instance.game.entities[socket.id] = { x: 0, y: 0.5, actionIndex: -1 };
+        instance.game.entities[socket.id] = {
+          x: 0,
+          y: 0.5,
+          actionIndex: -1,
+          type: "paddle",
+        };
 
         // add player as current player
 
@@ -125,11 +144,19 @@ export function initGame(sio: Server, socket: Socket) {
         console.log("starting game", gid);
 
         instance.game.play();
-        instance.sendUpdateInterval = setInterval(() => {
-          io.in(gid).emit("update", { state: instance.game.getServerState() });
-        }, 1000 / instance.game.sendFrequency);
+        let counter = 0;
         instance.updateInterval = setInterval(() => {
           instance.game.update();
+          counter += 1;
+          if (
+            counter >
+            instance.game.updateFrequency / instance.game.sendFrequency
+          ) {
+            counter = 0;
+            io.in(gid).emit("update", {
+              state: instance.game.getServerState(),
+            });
+          }
         }, 1000 / instance.game.updateFrequency);
       }
     } catch (error) {
@@ -151,6 +178,7 @@ export function initGame(sio: Server, socket: Socket) {
         if (instance.left === socket) instance.left = null;
         if (instance.right === socket) instance.right = null;
         delete instance.game.entities[socket.id];
+        if (instance.updateInterval) clearInterval(instance.updateInterval);
       }
     }
   });
