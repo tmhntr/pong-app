@@ -1,51 +1,70 @@
 import React, { useEffect, useRef, useState } from "react";
-import { ClientGame } from "../utils/game";
+import { useParams } from "react-router-dom";
+import { IO } from "../io";
+// import { Namespace } from "socket.io";
 import Ball from "./Ball";
 import Paddle from "./Paddle";
+import { v4 as uuid } from "uuid";
+
+import "./Pong.css";
+import { GameState, ServerUpdate } from "./types";
+import ClientGame from "./clientGame";
 
 import "./Pong.css";
 
-type Position = { x: number; y: number };
-export type GameState = {
-  paddles: { [index: string]: Position };
-  ball: Position;
-  score: { left: number; right: number };
-};
+const Pong: React.FC<{ name: string }> = ({ name }) => {
+  let params = useParams();
+  let gameId = params.gameId || uuid().split("-")[0];
 
-const Pong: React.FC<{ game: ClientGame }> = ({ game }) => {
   const [state, setState] = useState<GameState>({
-    paddles: {},
-    ball: { x: 0.5, y: 0.5 },
+    entities: {},
     score: { left: 0, right: 0 },
   });
-  const gameRef = useRef<HTMLDivElement>();
+  const [pid, setPid] = useState<string | null>(null);
+  const [names, setNames] = useState<{
+    left: string | null;
+    right: string | null;
+  }>({ left: "", right: "" });
 
-  function handleWindowSizeChange() {
-    // handle window resize
-  }
+  const gameRef = useRef<HTMLDivElement>(null);
+
+  // function handleWindowSizeChange() {
+  //   // handle window resize
+  // }
+
+  // useEffect(() => {
+  //   window.addEventListener("resize", handleWindowSizeChange);
+  //   return () => {
+  //     window.removeEventListener("resize", handleWindowSizeChange);
+  //   };
+  // }, []);
 
   useEffect(() => {
-    window.addEventListener("resize", handleWindowSizeChange);
-    return () => {
-      window.removeEventListener("resize", handleWindowSizeChange);
-    };
-  }, []);
+    const game = new ClientGame(setState);
 
-  useEffect(() => {
-    // let canvas = document.getElementById('canvas') as HTMLCanvasElement
-    // const DISPLAY = true
+    const IOhandler = new IO(setPid, setNames, game);
+    IOhandler.joinGame(gameId, name);
+    game.start();
+    setInterval(() => console.log(state), 5000);
   }, []);
 
   return (
     <div>
       <div className="scoreboard">
-        <div>{}</div>
+        <div>{names.left}</div>
+        <div>
+          {state.score.left}:{state.score.right}
+        </div>
+        <div>{names.right}</div>
       </div>
       <div id="game" ref={gameRef}>
-        {Object.values(state.paddles).map((paddle, index) => (
-          <Paddle key={index} {...paddle} />
-        ))}
-        <Ball {...state.ball} />
+        {Object.keys(state.entities).map((entityId, index) =>
+          entityId === "ball" ? (
+            <Ball {...state.entities[entityId]} />
+          ) : (
+            <Paddle {...state.entities[entityId]} />
+          )
+        )}
       </div>
     </div>
   );

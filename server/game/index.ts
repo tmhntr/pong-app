@@ -1,7 +1,6 @@
 import { Server, Socket } from "socket.io";
 import { DefaultEventsMap } from "socket.io/dist/typed-events";
-import { ClientToServerEvents, ServerToClientEvents } from "src/utils/events";
-import { Side } from "src/utils/game/types";
+import { ClientToServerEvents, ServerToClientEvents } from "src/events";
 import { v4 as uuid } from "uuid";
 import ServerGame from "./game";
 var io: Server<ClientToServerEvents, ServerToClientEvents>;
@@ -37,30 +36,25 @@ export function purgeGames() {
   });
 }
 
-function playerLeaveGame(socket: Socket) {
-  try {
-    let { gameId } = currentPlayers[socket.id];
-    let instance = gameId ? currentInstances[gameId] : null;
-    if (instance) {
-      instance.game.pause();
-      if (instance.left === socket) instance.left = null;
-      if (instance.right === socket) instance.left = null;
-    }
-    delete currentPlayers[socket.id];
-  } catch (error) {
-    console.log(error);
-  }
-}
-
 export function initGame(sio: Server, socket: Socket) {
   io = sio;
   gameSocket = socket;
+
+  const sendNames = (gid: string) => {
+    let instance = currentInstances[gid];
+    if (instance) {
+      let names = {
+        left: instance.left ? currentPlayers[instance.left.id].name : null,
+        right: instance.right ? currentPlayers[instance.right.id].name : null,
+      };
+      io.to(gid).emit("nameUpdate", names);
+    }
+  };
 
   gameSocket.emit("connected", { message: "Connected successfully" });
 
   gameSocket.on("clientAction", ({ action }) => {
     // get current game
-
     try {
       let { gameId } = currentPlayers[socket.id];
       if (gameId) {
@@ -74,111 +68,69 @@ export function initGame(sio: Server, socket: Socket) {
     }
   });
 
-  gameSocket.on("newGame", ({ name }) => {
-    // create game id
-    let gid = uuid().split("-")[0];
-
-    // greate new game
-    let instance: GameInstance = {
-      game: new ServerGame(),
-      left: null,
-      right: null,
-    };
-
-    // add game to list of current games
-    currentInstances[gid] = instance;
-
-    // assign player to left paddle
-    instance.left = socket;
-
-    // add player as current player
-    currentPlayers[socket.id] = { gameId: gid, name: name };
-
-    // add player to game room
-    io.in(socket.id).socketsJoin(gid);
-
-    // tell client success
-    gameSocket.emit("newGameSuccess", { gid, side: "left" });
-  });
-
   gameSocket.on("joinGame", ({ gid, name }) => {
     // get game using game id
     // console.log(gid);
-
-    let instance = currentInstances[gid];
-    let side: Side;
     try {
-      // error if game doesn't exist
-      if (!instance) throw { message: `Game ${gid} does not exist` };
+      let instance: GameInstance;
 
-      // assign player to an open side
-      if (!instance.right) {
-        instance.right = socket;
-        side = "right";
-      } else if (!instance.left) {
+      if (gid in currentInstances) {
+        instance = currentInstances[gid];
+        // assign player to an open side
+        if (!instance.left) {
+          instance.left = socket;
+          instance.game.entities[socket.id] = { x: 0, y: 0.5, actionIndex: -1 };
+        } else if (!instance.right) {
+          instance.right = socket;
+          instance.game.entities[socket.id] = { x: 1, y: 0.5, actionIndex: -1 };
+        }
+        // error if game is full
+        else {
+          throw { message: "Game full" };
+        }
+      } else {
+        // greate new game
+        let gid = uuid().split("-")[0];
+
+        instance = {
+          game: new ServerGame(),
+          left: null,
+          right: null,
+        };
+
+        // add game to list of current games
+        currentInstances[gid] = instance;
+
+        // assign player to left paddle
         instance.left = socket;
-        side = "left";
+        instance.game.entities[socket.id] = { x: 0, y: 0.5, actionIndex: -1 };
+
+        // add player as current player
+
+        // add player to game room
       }
-      // error if game is full
-      else {
-        throw { message: "Game full" };
-      }
 
-      // tell other players a new player joined
-      io.to(gid).emit("playerJoinedRoom", { playerName: name });
-
-      // add player to the room "gid"
-      io.in(socket.id).socketsJoin(gid);
-
-      // add player as current player
       currentPlayers[socket.id] = { gameId: gid, name: name };
-      let opponentSocket = instance[side === "left" ? "right" : "left"];
-      let opponentId = opponentSocket ? opponentSocket.id : null;
-      let opponentName = opponentId ? currentPlayers[opponentId].name : null;
+      io.in(socket.id).socketsJoin(gid);
       gameSocket.emit("joinGameSuccess", {
         gid,
-        side,
-        opponentName: opponentName ? opponentName : undefined,
+        pid: socket.id,
       });
+
+      sendNames(gid);
+      io.in(gid).emit("update", { state: instance.game.getServerState() });
+
       // start game if there are two players
       if (instance.left && instance.right) {
         console.log("starting game", gid);
 
         instance.game.play();
         instance.sendUpdateInterval = setInterval(() => {
-          instance.left?.emit("update", {
-            state: {
-              entities: {
-                ball: instance.game.entities.ball.state,
-                left: instance.game.entities.left.state,
-                right: instance.game.entities.right.state,
-              },
-              score: instance.game.score,
-              status: instance.game.status,
-              timestamp: Date.now(),
-              index: instance.game.lastProcessedAction.left,
-              nextBounce: instance.game.nextBounce,
-            },
-          });
-          instance.right?.emit("update", {
-            state: {
-              entities: {
-                ball: instance.game.entities.ball.state,
-                left: instance.game.entities.left.state,
-                right: instance.game.entities.right.state,
-              },
-              score: instance.game.score,
-              status: instance.game.status,
-              timestamp: Date.now(),
-              index: instance.game.lastProcessedAction.left,
-              nextBounce: instance.game.nextBounce,
-            },
-          });
-          instance.game.nextBounce = undefined;
-        }, 100);
+          io.in(gid).emit("update", { state: instance.game.getServerState() });
+        }, 1000 / instance.game.sendFrequency);
         instance.updateInterval = setInterval(() => {
           instance.game.update();
-        }, 50);
+        }, 1000 / instance.game.updateFrequency);
       }
     } catch (error) {
       gameSocket.emit("joinGameFailed", {
@@ -188,7 +140,19 @@ export function initGame(sio: Server, socket: Socket) {
   });
 
   gameSocket.on("disconnect", (reason) => {
-    playerLeaveGame(socket);
+    if (currentPlayers[socket.id]) {
+      let { gameId } = currentPlayers[socket.id];
+      delete currentPlayers[socket.id];
+
+      let instance = gameId ? currentInstances[gameId] : null;
+
+      if (instance) {
+        instance.game.pause();
+        if (instance.left === socket) instance.left = null;
+        if (instance.right === socket) instance.right = null;
+        delete instance.game.entities[socket.id];
+      }
+    }
   });
 }
 

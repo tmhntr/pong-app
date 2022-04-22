@@ -1,31 +1,24 @@
 import { useEffect, useState } from "react";
+import { Route, Routes } from "react-router-dom";
 import "./App.css";
+import NamePage from "./NamePage";
 import Pong from "./Pong";
-import { ClientGame } from "./utils/game";
 import WaitingPage from "./WaitingPage";
 
-let game: ClientGame;
-const useGame = () => {
-  if (!game) {
-    game = new ClientGame();
-  }
-  return game;
-};
-
 function App() {
-  const [page, setPage] = useState<"waiting" | "pong">("waiting");
-  const game = useGame();
+  const [name, setName] = useState<string | null>(null);
+
   return (
     <div className="App">
       <header className="App-header"></header>
-      <div className="container">
-        <h1>Pong!</h1>
-        {page === "waiting" ? (
-          <WaitingPage game={game} onPlay={() => setPage("pong")} />
-        ) : (
-          <Pong game={game} />
-        )}
-      </div>
+      {!name ? (
+        <NamePage setName={setName} />
+      ) : (
+        <Routes>
+          <Route path="/" element={<WaitingPage />}></Route>
+          <Route path="/:gameId" element={<Pong name={name} />}></Route>
+        </Routes>
+      )}
     </div>
   );
 }
