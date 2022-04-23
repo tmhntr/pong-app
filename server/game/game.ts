@@ -5,7 +5,6 @@ import {
   Score,
   ServerUpdate,
 } from "../../src/Pong/types";
-import { CLIENT_UPDATE_FREQ } from "../../src/Pong/clientGame";
 // import { InputHandler, RemoteInputHandler } from "./input";
 import { v4 as uuid } from "uuid";
 import { ball, paddle } from "../../src/Pong/helpers";

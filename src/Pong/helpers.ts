@@ -107,14 +107,14 @@ export class InputHandler {
       switch (event.key) {
         case keys.up:
           event.preventDefault();
-          console.log("up");
+          // console.log("up");
 
           this.action = -1;
           break;
 
         case keys.down:
           event.preventDefault();
-          console.log("down");
+          // console.log("down");
 
           this.action = 1;
           break;
