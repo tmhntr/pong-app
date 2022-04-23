@@ -1,40 +1,24 @@
 import React, { useState } from "react";
-import Pong from "./Pong";
-import { ClientGame } from "./utils/game";
+import { useNavigate } from "react-router-dom";
+import { v4 as uuid } from "uuid";
 
-const WaitingPage: React.FC<{ game: ClientGame; onPlay: () => void }> = ({
-  game,
-  onPlay,
-}) => {
+const WaitingPage: React.FC = () => {
   const [code, setCode] = useState("");
-  const [name, setName] = useState("Player");
 
-  const newGame = () => {
-    game.io.newGame(name);
-    onPlay();
-  };
-  const joinGame = () => {
-    game.io.joinGame(code, name);
-    onPlay();
-  };
+  let navigate = useNavigate();
 
   return (
     <>
-      <div>
-        <input
-          placeholder="display name"
-          value={name}
-          onChange={({ target }) => setName(target.value)}
-        ></input>
-      </div>
-      <button onClick={newGame}>Start new game</button>
+      <button onClick={() => navigate("/" + uuid().split("-")[0])}>
+        Start new game
+      </button>
       <p>OR</p>
       <input
         placeholder="game code"
         value={code}
         onChange={({ target }) => setCode(target.value)}
       ></input>
-      <button onClick={joinGame}>Join game</button>
+      <button onClick={() => navigate("/" + code)}>Join game</button>
     </>
   );
 };
