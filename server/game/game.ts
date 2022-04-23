@@ -13,9 +13,8 @@ import { ball, paddle } from "../../src/Pong/helpers";
 
 export default class ServerGame {
   actionQueue: Action[] = [];
-  updateFrequency = 20;
+  updateFrequency = 10;
   sendFrequency = 10;
-  paddleSpeed = 0.3;
   entities: Entities = {};
   status: "playing" | "paused" = "paused";
   score: Score = { left: 0, right: 0 };
@@ -37,8 +36,7 @@ export default class ServerGame {
   applyAction(action: Action) {
     try {
       if (this.entities[action.entityId]) {
-        this.entities[action.entityId].y +=
-          (action.move * paddle.vy) / CLIENT_UPDATE_FREQ;
+        this.entities[action.entityId].y += action.move;
         if (
           !this.entities[action.entityId].actionIndex ||
           this.entities[action.entityId].actionIndex < action.inputSeqNumber
@@ -52,10 +50,12 @@ export default class ServerGame {
 
   update() {
     // let dt = now - this.state.timestamp;
+
     if (this.status === "playing") {
-      let actions = this.actionQueue;
-      this.actionQueue = [];
-      actions.forEach((action) => this.applyAction(action));
+      while (this.actionQueue.length > 0) {
+        let action = this.actionQueue.shift();
+        action && this.applyAction(action);
+      }
 
       Object.keys(this.entities).forEach((key) => {
         if (this.entities[key].type === "paddle") {
@@ -81,10 +81,6 @@ export default class ServerGame {
         }
       }
     } else {
-      this.actionQueue.forEach((action) => {
-        if (this.entities[action.entityId].actionIndex < action.inputSeqNumber)
-          this.entities[action.entityId].actionIndex = action.inputSeqNumber;
-      });
       this.actionQueue = [];
     }
   }

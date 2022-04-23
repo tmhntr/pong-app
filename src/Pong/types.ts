@@ -32,6 +32,6 @@ export type GameStatus = "paused" | "playing";
 export type Action = {
   entityId: string | number;
   inputSeqNumber: number;
-  move: -1 | 0 | 1;
+  move: number;
 };
 export type Score = { left: number; right: number };

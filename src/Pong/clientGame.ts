@@ -2,7 +2,7 @@ import { IO } from "../io";
 import { InputHandler, paddle } from "./helpers";
 import { Action, Entities, GameState, GameStatus, ServerUpdate } from "./types";
 
-export const CLIENT_UPDATE_FREQ = 40;
+export const CLIENT_UPDATE_FREQ = 30;
 
 export default class ClientGame {
   stateBuffer: ServerUpdate[] = [];
@@ -15,6 +15,7 @@ export default class ClientGame {
   status: GameStatus = "paused";
   update: () => void;
   io: IO;
+  prevTime: number = 0;
 
   constructor(
     setState: (state: GameState) => void,
@@ -30,6 +31,9 @@ export default class ClientGame {
     this.io.joinGame(gid, name);
 
     this.update = () => {
+      let now = Date.now();
+      let dt = now - this.prevTime;
+      this.prevTime = now;
       let lastState = this.stateBuffer.slice(-1)[0];
       if (this.status === "playing") {
         let entities = {
@@ -49,9 +53,9 @@ export default class ClientGame {
         });
       }
       this.pushAction({
-        move: this.input.getAction(),
+        move: this.input.getAction() * (dt / 1000) * paddle.vy,
         entityId: this.pid,
-        inputSeqNumber: this.actionIndex++,
+        inputSeqNumber: ++this.actionIndex,
       });
     };
   }
@@ -109,10 +113,10 @@ export default class ClientGame {
       let entity = lastState.entities[this.pid];
       if (entity) {
         this.actionBuffer = this.actionBuffer.filter(
-          (val) => val.inputSeqNumber >= entity.actionIndex
+          (val) => val.inputSeqNumber > entity.actionIndex
         );
         entity.y = this.actionBuffer.reduce((prev, current) => {
-          return prev + (current.move * paddle.vy) / CLIENT_UPDATE_FREQ;
+          return prev + current.move;
         }, entity.y);
 
         if (entity.y > 1 - paddle.height / 2) {
@@ -144,6 +148,7 @@ export default class ClientGame {
   }
 
   start() {
+    this.prevTime = Date.now();
     this.updateInterval = setInterval(() => {
       this.update();
     }, 1000 / this.updateFrequency);

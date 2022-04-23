@@ -144,19 +144,11 @@ export function initGame(sio: Server, socket: Socket) {
         console.log("starting game", gid);
 
         instance.game.play();
-        let counter = 0;
         instance.updateInterval = setInterval(() => {
           instance.game.update();
-          counter += 1;
-          if (
-            counter >
-            instance.game.updateFrequency / instance.game.sendFrequency
-          ) {
-            counter = 0;
-            io.in(gid).emit("update", {
-              state: instance.game.getServerState(),
-            });
-          }
+          io.in(gid).emit("update", {
+            state: instance.game.getServerState(),
+          });
         }, 1000 / instance.game.updateFrequency);
       }
     } catch (error) {
