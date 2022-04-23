@@ -32,29 +32,19 @@ export default class ServerGame {
     this.status = "paused";
   }
 
-  applyAction(action: Action) {
-    try {
-      if (this.entities[action.entityId]) {
-        this.entities[action.entityId].y += action.move;
-        if (
-          !this.entities[action.entityId].actionIndex ||
-          this.entities[action.entityId].actionIndex < action.inputSeqNumber
-        )
-          this.entities[action.entityId].actionIndex = action.inputSeqNumber;
-      }
-    } catch (error) {
-      console.log(error);
-    }
-  }
-
   update() {
     // let dt = now - this.state.timestamp;
 
     if (this.status === "playing") {
-      while (this.actionQueue.length > 0) {
-        let action = this.actionQueue.shift();
-        action && this.applyAction(action);
+      for (let entityId in this.entities) {
+        this.entities[entityId].y = this.actionQueue
+          .filter((action) => action.entityId === entityId)
+          .reduce((prev, current) => {
+            this.entities[entityId].actionIndex = current.inputSeqNumber;
+            return prev + current.move;
+          }, this.entities[entityId].y);
       }
+      this.actionQueue = [];
 
       Object.keys(this.entities).forEach((key) => {
         if (this.entities[key].type === "paddle") {
