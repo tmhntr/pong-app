@@ -11,14 +11,17 @@ function App() {
   return (
     <div className="App">
       <header className="App-header"></header>
-      {!name ? (
-        <NamePage setName={setName} />
-      ) : (
-        <Routes>
-          <Route path="/" element={<WaitingPage />}></Route>
-          <Route path="/:gameId" element={<Pong name={name} />}></Route>
-        </Routes>
-      )}
+      <div className="container">
+        <h1>Pong!</h1>
+        {!name ? (
+          <NamePage setName={setName} />
+        ) : (
+          <Routes>
+            <Route path="/" element={<WaitingPage />}></Route>
+            <Route path="/:gameId" element={<Pong name={name} />}></Route>
+          </Routes>
+        )}
+      </div>
     </div>
   );
 }
