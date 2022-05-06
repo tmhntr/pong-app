@@ -14,6 +14,12 @@ env.config();
 const app = express();
 app.use(express.static(path.resolve(__dirname, "../../build")));
 
+app.get("/:gameId", function (req, res) {
+  // var uid = req.params.uid;
+  let reqpath = "index.html";
+  res.sendFile(reqpath, { root: path.resolve(__dirname, "../../build") });
+});
+
 const httpServer = createServer(app);
 
 const io = new Server(httpServer, {

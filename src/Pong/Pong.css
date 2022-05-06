@@ -1,0 +1,25 @@
+.scoreboard {
+    width: min(80rem, 90%);
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+    margin: 1rem auto
+}
+
+.scoreboard * {
+    width: 6rem;
+}
+
+#game {
+    margin: 2rem auto;
+    position: relative;
+    
+    background-image: url("../../public/tennis-court.png"); /* The image used */
+    background-color: #cccccc; /* Used if the image is unavailable */
+    width: min(80rem, 90%);
+    aspect-ratio: 4 / 3;
+    /* height: 500px; /* You must set a specified height */
+    background-position: center; /* Center the image */
+    background-repeat: no-repeat; /* Do not repeat the image */
+    background-size: cover; /* Resize the background image to cover the entire container */
+}

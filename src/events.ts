@@ -1,30 +1,22 @@
-import { Action, GameState, Side } from "./game/types";
+import { Action, ServerUpdate } from "./Pong/types";
 
 export interface ServerToClientEvents {
   connected: (data: { message: string }) => void;
 
   // game initialization
-  newGameSuccess: (data: { gid: string; side: Side }) => void;
-  newGameFailed: (error: { message: string }) => void;
-  joinGameSuccess: (data: { gid: string; side: Side }) => void;
+  joinGameSuccess: (data: { gid: string; pid: string }) => void;
   joinGameFailed: (error: { message: string }) => void;
-  playerJoinedRoom: (data: { playerName: string }) => void;
-
-  // start the game
-  beginGame: () => void;
+  nameUpdate: (data: { left: string | null; right: string | null }) => void;
 
   // gameplay mechanics
-  serverAction: (data: { action: Action }) => void;
-  update: (data: { state: GameState }) => void;
+  update: (data: { state: ServerUpdate }) => void;
 
   // end of game/error
-  playerLeftRoom: () => void;
   error: (data: { message: string }) => void;
 }
 
 export interface ClientToServerEvents {
   // game initialization
-  newGame: (data: { name: string }) => void;
   joinGame: (data: { gid: string; name: string }) => void;
 
   // gameplay
