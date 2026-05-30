@@ -158,6 +158,27 @@ export function initGame(sio: Server, socket: Socket) {
     }
   });
 
+  gameSocket.on("rematch", () => {
+    try {
+      let { gameId } = currentPlayers[socket.id];
+      if (gameId) {
+        let instance = currentInstances[gameId];
+        if (instance && instance.left && instance.right) {
+          if (instance.updateInterval) clearInterval(instance.updateInterval);
+          instance.game.rematch();
+          instance.updateInterval = setInterval(() => {
+            instance.game.update();
+            io.in(gameId!).emit("update", {
+              state: instance.game.getServerState(),
+            });
+          }, 1000 / instance.game.updateFrequency);
+        }
+      }
+    } catch (error) {
+      gameSocket.emit("error", { message: "Could not start rematch" });
+    }
+  });
+
   gameSocket.on("disconnect", (reason) => {
     if (currentPlayers[socket.id]) {
       let { gameId } = currentPlayers[socket.id];

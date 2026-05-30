@@ -1,47 +1,66 @@
 .App {
   text-align: center;
-}
-
-.container {
-  margin: 2rem auto;
-  padding: 4rem ;
-  width: min(70rem, 100%);
-  height: 100%;
-  background-color: whitesmoke;
-  box-shadow: 5px 10px 10px #888888;
-}
-
-.App-logo {
-  height: 40vmin;
-  pointer-events: none;
-}
-
-@media (prefers-reduced-motion: no-preference) {
-  .App-logo {
-    animation: App-logo-spin infinite 20s linear;
-  }
-}
-
-/* .App-header {
-  background-color: #282c34;
   min-height: 100vh;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  font-size: calc(10px + 2vmin);
-  color: white;
-} */
-
-.App-link {
-  color: #61dafb;
 }
 
-@keyframes App-logo-spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
+.container {
+  width: min(70rem, 95%);
+  padding: 2rem;
+}
+
+.container h1 {
+  font-size: 2.5rem;
+  color: #00ff88;
+  text-shadow: 0 0 10px #00ff88, 0 0 20px #00ff8855;
+  margin-bottom: 2rem;
+  letter-spacing: 0.1em;
+}
+
+.container input {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 0.8rem;
+  padding: 0.8rem 1.2rem;
+  background: #1a1a2e;
+  border: 2px solid #00ff88;
+  color: #e0e0e0;
+  outline: none;
+  margin: 0.5rem;
+}
+
+.container input:focus {
+  box-shadow: 0 0 8px #00ff8888;
+}
+
+.container input::placeholder {
+  color: #555;
+}
+
+.container button {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 0.7rem;
+  padding: 0.8rem 1.5rem;
+  background: transparent;
+  border: 2px solid #00ff88;
+  color: #00ff88;
+  cursor: pointer;
+  margin: 0.5rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  transition: all 0.15s;
+}
+
+.container button:hover {
+  background: #00ff88;
+  color: #0a0a0a;
+  box-shadow: 0 0 15px #00ff8888;
+}
+
+.container p {
+  color: #555;
+  font-size: 0.6rem;
+  margin: 1rem 0;
 }

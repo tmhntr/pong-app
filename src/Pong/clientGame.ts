@@ -17,12 +17,16 @@ export default class ClientGame {
   io: IO;
   prevTime: number = 0;
 
+  setWinner: (winner: "left" | "right" | null) => void;
+
   constructor(
     setState: (state: GameState) => void,
     setNames: (names: { left: string | null; right: string | null }) => void,
+    setWinner: (winner: "left" | "right" | null) => void,
     gid: string,
     name: string
   ) {
+    this.setWinner = setWinner;
     this.input = new InputHandler({
       up: "ArrowUp",
       down: "ArrowDown",
@@ -89,7 +93,6 @@ export default class ClientGame {
           entityId in this.stateBuffer[1].entities &&
           entityId in this.stateBuffer[0].entities
         ) {
-          let entity0 = this.stateBuffer[0].entities[entityId];
           var x0 = this.stateBuffer[0].entities[entityId].x;
           var x1 = this.stateBuffer[1].entities[entityId].x;
           var y0 = this.stateBuffer[0].entities[entityId].y;
@@ -139,6 +142,9 @@ export default class ClientGame {
   pushState(state: ServerUpdate) {
     this.status = state.status;
     this.stateBuffer.push(state);
+    if (state.winner) {
+      this.setWinner(state.winner);
+    }
   }
 
   pushAction(action: Action) {

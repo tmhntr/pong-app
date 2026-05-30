@@ -75,4 +75,8 @@ export class IO {
   action(action: Action) {
     this.socket.emit("clientAction", { action });
   }
+
+  rematch() {
+    this.socket.emit("rematch");
+  }
 }

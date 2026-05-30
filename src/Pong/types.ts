@@ -25,6 +25,7 @@ export type GameState = {
 export type ServerUpdate = GameState & {
   timestamp: number;
   status: GameStatus;
+  winner: "left" | "right" | null;
 };
 
 export type GameStatus = "paused" | "playing";

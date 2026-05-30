@@ -16,11 +16,12 @@
     "web-vitals": "^2.1.0"
   },
   "scripts": {
-    "start": "react-scripts start",
-    "build": "react-scripts build",
-    "test": "react-scripts test",
-    "eject": "react-scripts eject",
-    "serve": "node dist/server/index.js"
+    "dev": "react-scripts start",
+    "build:client": "react-scripts build",
+    "build:server": "tsc -p server/tsconfig.json",
+    "build": "npm run build:client && npm run build:server",
+    "start": "node dist/server/index.js",
+    "test": "react-scripts test"
   },
   "eslintConfig": {
     "extends": [

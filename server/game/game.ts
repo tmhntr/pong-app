@@ -10,6 +10,8 @@ import { v4 as uuid } from "uuid";
 import { ball, paddle } from "../../src/Pong/helpers";
 // type gameObject = Ball | Paddle;
 
+const WIN_SCORE = 7;
+
 export default class ServerGame {
   actionQueue: Action[] = [];
   updateFrequency = 10;
@@ -17,6 +19,7 @@ export default class ServerGame {
   entities: Entities = {};
   status: "playing" | "paused" = "paused";
   score: Score = { left: 0, right: 0 };
+  winner: "left" | "right" | null = null;
   nextBounce: number = 0;
 
   constructor() {
@@ -63,10 +66,18 @@ export default class ServerGame {
         if (ballEntity.x > 1) {
           this.resetBall();
           this.score.left++;
+          if (this.score.left >= WIN_SCORE) {
+            this.winner = "left";
+            this.status = "paused";
+          }
         }
         if (ballEntity.x < 0) {
           this.resetBall();
           this.score.right++;
+          if (this.score.right >= WIN_SCORE) {
+            this.winner = "right";
+            this.status = "paused";
+          }
         }
       }
     } else {
@@ -131,11 +142,19 @@ export default class ServerGame {
     };
   }
 
+  rematch() {
+    this.score = { left: 0, right: 0 };
+    this.winner = null;
+    this.resetBall();
+    this.status = "playing";
+  }
+
   getServerState(): ServerUpdate {
     return {
       entities: this.entities,
       score: this.score,
       status: this.status,
+      winner: this.winner,
       timestamp: Date.now(),
     };
   }
