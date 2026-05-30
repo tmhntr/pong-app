@@ -22,4 +22,5 @@ export interface ClientToServerEvents {
   // gameplay
   clientAction: (data: { action: Action }) => void;
   requestUpdate: (data: { timestamp: number }) => void;
+  rematch: () => void;
 }

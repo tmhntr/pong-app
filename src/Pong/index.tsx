@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
 import Ball from "./Ball";
 import Paddle from "./Paddle";
@@ -14,6 +14,7 @@ const Pong: React.FC<{ name: string }> = ({ name }) => {
 
   const [score, setScore] = useState<Score>({ left: 0, right: 0 });
   const [entities, setEntities] = useState<Entity[]>([]);
+  const [winner, setWinner] = useState<"left" | "right" | null>(null);
 
   const setState = (state: { entities?: Entities; score?: Score }) => {
     if (state.entities) setEntities(Object.values(state.entities));
@@ -25,11 +26,20 @@ const Pong: React.FC<{ name: string }> = ({ name }) => {
     right: string | null;
   }>({ left: "", right: "" });
 
-  useEffect(() => {
-    const game = new ClientGame(setState, setNames, gameId, name);
+  const gameRef = useRef<ClientGame | null>(null);
 
+  useEffect(() => {
+    const game = new ClientGame(setState, setNames, setWinner, gameId, name);
+    gameRef.current = game;
     game.start();
   }, []);
+
+  const handleRematch = () => {
+    if (gameRef.current) {
+      gameRef.current.io.rematch();
+      setWinner(null);
+    }
+  };
 
   return (
     <div>
@@ -42,7 +52,21 @@ const Pong: React.FC<{ name: string }> = ({ name }) => {
       </div>
       <div id="game">
         {entities.map((entity, index) =>
-          entity.type === "ball" ? <Ball {...entity} /> : <Paddle {...entity} />
+          entity.type === "ball" ? (
+            <Ball key={index} {...entity} />
+          ) : (
+            <Paddle key={index} {...entity} />
+          )
+        )}
+        {winner && (
+          <div className="game-over-overlay">
+            <div className="game-over-content">
+              <h2>{winner === "left" ? names.left : names.right} wins!</h2>
+              <button className="rematch-btn" onClick={handleRematch}>
+                Play Again
+              </button>
+            </div>
+          </div>
         )}
       </div>
     </div>
