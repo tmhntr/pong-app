@@ -1,11 +1,5 @@
 import { Key } from "react";
-import {
-  BallSpec,
-  Entities,
-  EntitySpec,
-  GameState,
-  ServerUpdate,
-} from "./types";
+import { BallSpec, EntitySpec } from "./types";
 
 export class InputHandler {
   currentTouchId: number | null;

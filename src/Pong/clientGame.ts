@@ -89,7 +89,6 @@ export default class ClientGame {
           entityId in this.stateBuffer[1].entities &&
           entityId in this.stateBuffer[0].entities
         ) {
-          let entity0 = this.stateBuffer[0].entities[entityId];
           var x0 = this.stateBuffer[0].entities[entityId].x;
           var x1 = this.stateBuffer[1].entities[entityId].x;
           var y0 = this.stateBuffer[0].entities[entityId].y;

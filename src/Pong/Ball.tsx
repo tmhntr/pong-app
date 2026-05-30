@@ -1,19 +1,20 @@
 import React, { FC } from "react";
+import { ball } from "./helpers";
 
-const Paddle: FC<{ x: number; y: number }> = ({ x, y }) => {
-  const size = 0.025;
+const Ball: FC<{ x: number; y: number }> = ({ x, y }) => {
   return (
     <div
       style={{
-        width: `${size * 100}%`,
-        height: `${size * 100}%`,
-        backgroundColor: "blue",
+        width: `${ball.width * 100}%`,
+        height: `${ball.height * 100}%`,
+        backgroundColor: "white",
+        borderRadius: "50%",
         position: "absolute",
-        top: `${(y - size / 2) * 100}%`,
-        left: `${(x - size / 2) * 100}%`,
+        top: `${(y - ball.height / 2) * 100}%`,
+        left: `${(x - ball.width / 2) * 100}%`,
       }}
     ></div>
   );
 };
 
-export default Paddle;
+export default Ball;
